@@ -1,0 +1,8 @@
+mission_id: example-001
+goal: "Describir aquí el objetivo de la misión"
+workspace: "."
+deliverable: "Describir aquí el resultado esperado"
+constraints:
+  - "Trabajar solo dentro del workspace autorizado"
+  - "Leer antes de modificar"
+  - "No hacer commit automáticamente"
