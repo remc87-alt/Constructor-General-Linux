@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}PMO - Home{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold mb-4">Welcome to PMO</h2>
+    <div class="space-y-4">
+        <p id="message" class="text-gray-700">The button has not been clicked yet.</p>
+        <button 
+            hx-post="{% url 'change_text' %}"
+            hx-target="#message"
+            hx-swap="innerHTML"
+            class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+        >
+            Click me to change text
+        </button>
+    </div>
+</div>
+{% endblock %}

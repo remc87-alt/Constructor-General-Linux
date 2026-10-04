@@ -5,3 +5,10 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Django / local runtime
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+db.sqlite3
