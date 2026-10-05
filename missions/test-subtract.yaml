@@ -1,0 +1,10 @@
+mission_id: test-subtract
+goal: "Restar una función subtract(a, b) al módulo calculator y cubrirla con pruebas."
+workspace: "."
+deliverable: "Función subtract implementada y pruebas pasando."
+constraints:
+  - "Leer primero el código y las pruebas existentes"
+  - "Modificar solo src/calculator.py y tests/test_calculator.py"
+  - "No instalar paquetes"
+  - "No hacer commit"
+  - "Ejecutar pytest -q con PYTHONPATH=."

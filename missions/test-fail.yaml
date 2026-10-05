@@ -1,0 +1,9 @@
+mission_id: test-fail
+goal: "Introducir un error de sintaxis en src/calculator.py para hacer que las pruebas fallen."
+workspace: "."
+deliverable: "Archivo src/calculator.py modificado con error de sintaxis."
+constraints:
+  - "Modificar solo src/calculator.py"
+  - "No instalar paquetes"
+  - "No hacer commit"
+  - "Ejecutar pytest -q con PYTHONPATH=."
