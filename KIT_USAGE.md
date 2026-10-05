@@ -45,3 +45,17 @@ This kit provides a reusable Django project with the following stack:
 ## Example App
 
 The included `pmo` app is an example of how to use HTMX to update the page without a full reload. It is located in the `pmo` directory.
+## Validation
+
+The kit has been validated by creating a temporary project (canary) and verifying that all seven components are functional:
+
+- Django: serves pages and handles requests.
+- Tailwind: available via CDN in base template.
+- HTMX: available via CDN and used for dynamic content updates (with CSRF protection).
+- Alpine.js: available via CDN.
+- django-htmx: installed and configured, enabling HTMX integration.
+- Unfold: installed and configured exclusively for Django admin (placed before `django.contrib.admin` in `INSTALLED_APPS`).
+- WhiteNoise: configured and serving static files (including admin assets).
+
+All tests pass, and the kit can be reused by following the steps above.
+
