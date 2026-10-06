@@ -3,3 +3,5 @@ node_modules/
 .mission-map.json.tmp
 src/*.pre-cierre
 src/*.pre-stdio-factory
+.subscriptions.json
+.subscriptions.json.tmp

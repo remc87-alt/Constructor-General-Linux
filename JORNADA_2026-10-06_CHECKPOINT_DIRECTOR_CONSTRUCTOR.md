@@ -1063,3 +1063,59 @@ Al iniciar una nueva conversación sobre este frente:
 8. ejecutar sólo después.
 
 FIN DEL CHECKPOINT.
+
+---
+
+## 22. Validación posterior del mecanismo INICIA / reenganche
+
+Después de publicar este checkpoint inicialmente en GitHub, se realizó una prueba ciega desde una conversación nueva de ChatGPT.
+
+Condiciones de la prueba:
+
+- conversación sin contexto operativo previo;
+- GitHub como única fuente canónica;
+- sin entregar al nuevo Director las respuestas esperadas;
+- sin mencionar previamente MCP Events, `retry`, `CANTIDAD=1`, Content-Type ni las dos fronteras P0;
+- sin ejecutar misiones;
+- sin modificar archivos;
+- sin realizar pruebas operativas.
+
+Resultado:
+
+**INICIA / REENGANCHE DOCUMENTAL = PASS.**
+
+El nuevo Director recuperó autónomamente desde GitHub:
+
+- objetivo vigente;
+- arquitectura Director ↔ Constructor;
+- separación entre evidencia e hipótesis;
+- capacidades demostradas;
+- capacidades parcialmente demostradas;
+- FAIL y no demostrado;
+- DO_NOT_REPEAT;
+- corrección `get_mission ≠ retorno automático`;
+- estado literal `retry` y ausencia de evidencia de progreso semántico;
+- ausencia de suscripción real en los canaries anteriores;
+- las dos fronteras P0: reactivación y continuidad útil;
+- punto exacto de reenganche;
+- limitaciones de GitHub respecto del runtime y cambios locales no canonizados.
+
+También identificó correctamente que GitHub no permite inferir:
+
+- PIDs/procesos actualmente vivos;
+- estado runtime actual;
+- contenido runtime actual de `.subscriptions.json`;
+- estado exacto de cambios locales todavía no versionados.
+
+Conclusión:
+
+El repositorio permite a un Director nuevo reconstruir el estado conceptual y operativo del proyecto sin que Rodrigo tenga que reconstruir oralmente la historia.
+
+Esto demuestra la recuperabilidad documental del mecanismo INICIA/reenganche.
+
+NO demuestra por sí solo:
+
+- recuperación automática del runtime;
+- retorno automático Constructor → Director;
+- continuidad útil de OpenCode durante ausencia del Director;
+- funcionamiento E2E de MCP Events.
