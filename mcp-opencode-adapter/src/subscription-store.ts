@@ -25,7 +25,7 @@ export type SubscriptionRecord = {
 
 type SubscriptionState = Record<string, SubscriptionRecord>;
 
-const SUBSCRIPTIONS_FILE = path.resolve(
+const SUBSCRIPTIONS_FILE = process.env.MCP_SUBSCRIPTIONS_FILE ?? path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "..",
   ".subscriptions.json"
@@ -125,4 +125,11 @@ export function findSubscription(input: {
 
 export function subscriptionsFile(): string {
   return SUBSCRIPTIONS_FILE;
+}
+
+// Subscriptions still allowed to receive deliveries (not expired).
+export function activeSubscriptions(now = Date.now()): SubscriptionRecord[] {
+  return Object.values(loadSubscriptions()).filter(
+    (s) => s.expiresAt === null || Date.parse(s.expiresAt) > now
+  );
 }

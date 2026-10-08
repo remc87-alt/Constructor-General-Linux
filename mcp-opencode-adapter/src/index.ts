@@ -3,9 +3,8 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import fs from "node:fs";
 import path from "node:path";
-import { subscriptionId, loadSubscriptions, saveSubscriptions, SubscriptionRecord, SubscriptionDelivery, findSubscription, putSubscription, deleteSubscription } from "./subscription-store.ts";
-import { validateWebhookSecret, verifyWebhookCallback, Webhook } from "./webhook-security.ts";
-import { ProtocolError } from "@modelcontextprotocol/server";
+import { registerEventHandlers } from "./events.ts";
+import { latestAssistant, MissionEventEmitter, runOpenCodeEventStream } from "./event-emitter.ts";
 
 const BASE = process.env.OPENCODE_URL ?? "http://127.0.0.1:4096";
 const STATE_FILE = path.resolve(
@@ -48,17 +47,20 @@ function toolError(message: string) {
   };
 }
 
+function authHeaders(): Record<string, string> {
+  const password = process.env.OPENCODE_SERVER_PASSWORD;
+  return password
+    ? { Authorization: "Basic " + Buffer.from(`opencode:${password}`).toString("base64") }
+    : {};
+}
+
 async function oc(route: string, init: RequestInit = {}) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string> ?? {}),
   };
 
-  const password = process.env.OPENCODE_SERVER_PASSWORD;
-  if (password) {
-    headers.Authorization =
-      "Basic " + Buffer.from(`opencode:${password}`).toString("base64");
-  }
+  Object.assign(headers, authHeaders());
 
   const response = await fetch(BASE + route, { ...init, headers });
   const raw = await response.text();
@@ -76,26 +78,6 @@ async function oc(route: string, init: RequestInit = {}) {
   } catch {
     return raw;
   }
-}
-
-function textParts(message: any): string {
-  return (message?.parts ?? [])
-    .filter((p: any) => p?.type === "text" && typeof p.text === "string")
-    .map((p: any) => p.text)
-    .join("\n")
-    .trim();
-}
-
-function latestAssistant(messages: any[]): string | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
-    const role = m?.info?.role ?? m?.role;
-    if (role === "assistant") {
-      const text = textParts(m);
-      if (text) return text;
-    }
-  }
-  return null;
 }
 
 function statusFor(sessionID: string, statuses: any): string {
@@ -120,6 +102,25 @@ if (!health?.healthy) {
 }
 console.error(`OpenCode health PASS; version=${health.version ?? "unknown"}`);
 
+// MCP Events emitter: listens to OpenCode's own event stream inside this
+// process (no extra process, no polling). Opt-in: MCP_EVENTS_EMITTER=on.
+let emitter: MissionEventEmitter | null = null;
+if (process.env.MCP_EVENTS_EMITTER === "on") {
+  try {
+    emitter = new MissionEventEmitter({ oc, missions: () => missions });
+  } catch (e: any) {
+    // e.g. OutboxLockedError: another live adapter owns the outbox.
+    console.error(`MCP Events emitter disabled: ${e?.message ?? e}`);
+  }
+}
+console.error(`MCP Events emitter ${emitter ? "ENABLED" : "disabled (set MCP_EVENTS_EMITTER=on)"}`);
+if (emitter) {
+  const active = emitter;
+  // Durable recovery even if the OpenCode stream never connects.
+  active.resumePending().catch((e) => console.error(`resume pending failed: ${e?.message ?? e}`));
+  void runOpenCodeEventStream({ url: BASE + "/event", headers: authHeaders(), emitter: active });
+}
+
   // Function to create the MCP server with all handlers
   function createMcpServer() {
     const server = new McpServer(
@@ -127,6 +128,7 @@ console.error(`OpenCode health PASS; version=${health.version ?? "unknown"}`);
       {
         supportedProtocolVersions: ["2026-07-28"],
         capabilities: {
+          // @ts-expect-error SDK 2.3.1 types lack the draft MCP Events capability; it is advertised at runtime (test/events.test.ts).
           events: {}
         }
       }
@@ -325,336 +327,17 @@ console.error(`OpenCode health PASS; version=${health.version ?? "unknown"}`);
       }
     );
 
-    // MCP Events discovery contract.
-    // inputSchema = subscription arguments known before the event occurs.
-    // payloadSchema = event-specific data; timestamp belongs to the event envelope.
-    const missionSubscriptionSchema = {
-      type: "object",
-      properties: {
-        mission_id: { type: "string" }
-      },
-      required: ["mission_id"],
-      additionalProperties: false
-    };
-
-    server.server.setRequestHandler("events/list", {
-      params: z.object({}),
-      result: z.object({
-        events: z.array(
-          z.object({
-            name: z.string(),
-            description: z.string(),
-            delivery: z.array(z.literal("webhook")),
-            inputSchema: z.any(),
-            payloadSchema: z.any()
-          })
-        )
-      })
-    }, async (_params, _ctx) => {
-      return {
-      events: [
-        {
-          name: "mission.completed",
-          description: "Mission completed successfully",
-          delivery: ["webhook"],
-          inputSchema: missionSubscriptionSchema,
-          payloadSchema: {
-            type: "object",
-            properties: {
-              mission_id: { type: "string" },
-              session_id: { type: "string" },
-              result: { type: "string" }
-            },
-            required: ["mission_id", "session_id", "result"],
-            additionalProperties: false
-          }
-        },
-        {
-          name: "mission.failed",
-          description: "Mission failed",
-          delivery: ["webhook"],
-          inputSchema: missionSubscriptionSchema,
-          payloadSchema: {
-            type: "object",
-            properties: {
-              mission_id: { type: "string" },
-              session_id: { type: "string" },
-              error: { type: "string" }
-            },
-            required: ["mission_id", "session_id", "error"],
-            additionalProperties: false
-          }
-        },
-        {
-          name: "mission.blocked",
-          description: "Mission blocked",
-          delivery: ["webhook"],
-          inputSchema: missionSubscriptionSchema,
-          payloadSchema: {
-            type: "object",
-            properties: {
-              mission_id: { type: "string" },
-              session_id: { type: "string" },
-              reason: { type: "string" }
-            },
-            required: ["mission_id", "session_id", "reason"],
-            additionalPrivileges: false
-          }
-        },
-        {
-          name: "permission.required",
-          description: "Mission requires explicit user permission",
-          delivery: ["webhook"],
-          inputSchema: missionSubscriptionSchema,
-          payloadSchema: {
-            type: "object",
-            properties: {
-              mission_id: { type: "string" },
-              session_id: { type: "string" },
-              permission_id: { type: "string" },
-              permission: { type: "string" }
-            },
-            required: ["mission_id", "session_id", "permission_id", "permission"],
-            additionalProperties: false
-          }
-        }
-      ]
-      };
-    });
-
-    // Principal for single-tenant deployment (no authentication in stdio)
-    const PRINCIPAL = "empresa-ia-director-single-tenant";
-
-    // Helper to validate event name
-    function isValidEventName(name: string): boolean {
-      return ["mission.completed", "mission.failed", "mission.blocked", "permission.required"].includes(name);
-    }
-
-    // Helper to get input schema for an event (all share mission_id)
-    function getEventInputSchema(name: string): z.ZodTypeAny {
-      // All events have the same inputSchema: mission_id string, no extra props
-      return z.object({
-        mission_id: z.string()
-      }).strict();
-    }
-
-    // Helper to get payload schema for an event
-    function getEventPayloadSchema(name: string): z.ZodTypeAny {
-      switch (name) {
-        case "mission.completed":
-          return z.object({
-            mission_id: z.string(),
-            session_id: z.string(),
-            result: z.string()
-          }).strict();
-        case "mission.failed":
-          return z.object({
-            mission_id: z.string(),
-            session_id: z.string(),
-            error: z.string()
-          }).strict();
-        case "mission.blocked":
-          return z.object({
-            mission_id: z.string(),
-            session_id: z.string(),
-            reason: z.string()
-          }).strict();
-        case "permission.required":
-          return z.object({
-            mission_id: z.string(),
-            session_id: z.string(),
-            permission_id: z.string(),
-            permission: z.string()
-          }).strict();
-        default:
-          // Should not happen due to validation
-          return z.unknown();
+    registerEventHandlers(server, {
+      // Notify still-pending permissions/questions right after subscribing.
+      // Deferred so the subscribe response is sent first.
+      onSubscribed: (missionId) => {
+        if (!emitter) return;
+        setTimeout(() => {
+          emitter.evaluatePending(missionId).catch((e) =>
+            console.error(`post-subscribe evaluation failed: ${e?.message ?? e}`)
+          );
+        }, 1000).unref();
       }
-    }
-
-    // events/subscribe handler
-    server.server.setRequestHandler("events/subscribe", {
-      params: z.object({
-        name: z.string(),
-        arguments: z.any(),
-        delivery: z.object({
-          mode: z.literal("webhook"),
-          url: z.string(),
-          secret: z.string()
-        }),
-        cursor: z.union([z.string(), z.null()]).optional(),
-        ttlMs: z.union([z.number().int().nonnegative(), z.null()]).optional()
-      })
-    }, async (params, ctx) => {
-      const { name, arguments: args, delivery, cursor, ttlMs } = params;
-
-      // Validate event name
-      if (!isValidEventName(name)) {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown event name: ${name}`);
-      }
-
-      // Validate arguments against event's inputSchema
-      const inputSchema = getEventInputSchema(name);
-      const parseResult = inputSchema.safeParse(args);
-      if (!parseResult.success) {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid arguments for event ${name}: ${parseResult.error.message}`);
-      }
-
-      // Validate delivery
-      if (delivery.mode !== "webhook") {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Only webhook delivery mode is supported`);
-      }
-      // Validate secret
-      try {
-        validateWebhookSecret(delivery.secret);
-      } catch (e: any) {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid webhook secret: ${e.message}`);
-      }
-
-      // Compute subscription ID
-      const id = subscriptionId({
-        principal: PRINCIPAL,
-        name,
-        arguments: args,
-        callbackUrl: delivery.url
-      });
-
-      // Determine expiration and refresh times
-      const DEFAULT_SUBSCRIPTION_TTL_MS = 24 * 60 * 60 * 1000;
-      let expiresAt: string | null = null;
-      let refreshBefore: string | null = null;
-
-      if (ttlMs !== null) {
-        const grantedTtlMs =
-          ttlMs === undefined ? DEFAULT_SUBSCRIPTION_TTL_MS : ttlMs;
-        expiresAt = new Date(Date.now() + grantedTtlMs).toISOString();
-        refreshBefore = expiresAt;
-      }
-
-      // Build subscription record
-      const record: SubscriptionRecord = {
-        id,
-        principal: PRINCIPAL,
-        name,
-        arguments: args,
-        delivery: {
-          mode: delivery.mode,
-          url: delivery.url,
-          secret: delivery.secret,
-          // previousSecret and previousSecretExpiresAt will be handled on update if needed
-        },
-        cursor: null,
-        expiresAt,
-        refreshBefore,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // Before persisting, verify the webhook callback
-      try {
-        await verifyWebhookCallback(
-          { url: delivery.url, secret: delivery.secret },
-          PRINCIPAL,
-          id
-        );
-      } catch (e: any) {
-        // If verification fails, return CallbackEndpointError (-32015)
-        throw new ProtocolError(-32015, `Callback endpoint error: ${e.message}`);
-      }
-
-      // Check if subscription already exists (update case)
-      const existing = findSubscription({
-        principal: PRINCIPAL,
-        name,
-        arguments: args,
-        callbackUrl: delivery.url
-      });
-
-      if (existing) {
-        // Update existing record with new values (may have changed secret, cursor, ttlMs)
-        const previousSecret =
-          existing.delivery.secret !== delivery.secret
-            ? existing.delivery.secret
-            : existing.delivery.previousSecret;
-
-        existing.delivery = {
-          mode: delivery.mode,
-          url: delivery.url,
-          secret: delivery.secret,
-          previousSecret,
-          previousSecretExpiresAt:
-            previousSecret
-              ? new Date(Date.now() + 5 * 60 * 1000).toISOString()
-              : existing.delivery.previousSecretExpiresAt
-        };
-        existing.cursor = null;
-        existing.expiresAt = expiresAt;
-        existing.refreshBefore = refreshBefore;
-        existing.updatedAt = new Date().toISOString();
-        putSubscription(existing);
-      } else {
-        putSubscription(record);
-      }
-
-      // Return subscription result
-      return {
-        id,
-        refreshBefore,
-        cursor: null,
-        truncated: false
-      };
-    });
-
-    // events/unsubscribe handler
-    server.server.setRequestHandler("events/unsubscribe", {
-      params: z.object({
-        name: z.string(),
-        arguments: z.any(),
-        delivery: z.object({
-          mode: z.literal("webhook"),
-          url: z.string()
-          // secret not required for unsubscription
-        })
-      })
-    }, async (params, ctx) => {
-      const { name, arguments: args, delivery } = params;
-
-      // Validate event name
-      if (!isValidEventName(name)) {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown event name: ${name}`);
-      }
-
-      // Validate arguments (same as subscribe)
-      const inputSchema = getEventInputSchema(name);
-      const parseResult = inputSchema.safeParse(args);
-      if (!parseResult.success) {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid arguments for event ${name}: ${parseResult.error.message}`);
-      }
-
-      // Validate delivery
-      if (delivery.mode !== "webhook") {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Only webhook delivery mode is supported`);
-      }
-      // URL validation (basic)
-      try {
-        new URL(delivery.url);
-      } catch {
-        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid webhook URL`);
-      }
-
-      // Compute subscription ID (same as subscribe)
-      const id = subscriptionId({
-        principal: PRINCIPAL,
-        name,
-        arguments: args,
-        callbackUrl: delivery.url
-      });
-
-      // Delete subscription (idempotent)
-      deleteSubscription(id);
-
-      // Return empty result
-      return {};
     });
 
     console.error(`MCP OpenCode adapter ready; OpenCode=${BASE}`);

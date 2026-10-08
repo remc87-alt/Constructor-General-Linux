@@ -1,0 +1,19 @@
+# M03-G2 experimental tunnel-client profile TEMPLATE (no secrets).
+# Rendered by exp-tunnel.sh render into $EXP_TUNNEL_PROFILE (outside the repo).
+# Differs from the stable profile in: tunnel_id, health port, MCP command.
+config_version: 1
+control_plane:
+  base_url: "https://api.openai.com"
+  tunnel_id: "__EXP_TUNNEL_ID__"
+  api_key: "file:__EXP_CONTROL_PLANE_KEY_FILE__"
+health:
+  listen_addr: "__EXP_TUNNEL_HEALTH__"
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json
+mcp:
+  commands:
+    - channel: main
+      command: "__EXP_ADAPTER_WRAPPER__"

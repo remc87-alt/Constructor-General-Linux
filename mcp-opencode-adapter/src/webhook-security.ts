@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import dns from "node:dns/promises";
 import https from "node:https";
 import net from "node:net";
@@ -53,7 +54,37 @@ function cacheVerification(
 export type VerifiedDelivery = {
   url: string;
   secret: string;
+  previousSecret?: string;
+  previousSecretExpiresAt?: string;
 };
+
+// Categorized failure; `reason` is safe to expose as data.reason of -32015.
+export class WebhookError extends Error {
+  constructor(readonly reason: string, message: string) {
+    super(message);
+    this.name = "WebhookError";
+  }
+}
+
+export type WebhookResponse = { status: number; body: string };
+
+export type HttpsSender = (request: {
+  address: string;
+  url: URL;
+  headers: Record<string, string | number>;
+  payload: string;
+}) => Promise<WebhookResponse>;
+
+let sender: HttpsSender = httpsSend;
+
+// Tests replace only the final socket hop; URL, SSRF and signing checks still run.
+export function setHttpsSenderForTesting(fn: HttpsSender | null): void {
+  sender = fn ?? httpsSend;
+}
+
+export function clearVerificationCacheForTesting(): void {
+  verifiedCallbacks.clear();
+}
 
 function decodeWhsec(secret: string): Buffer {
   if (!secret.startsWith("whsec_")) {
@@ -185,7 +216,33 @@ async function signedPost(
 
   const signature = signatures.join(" ");
 
-  return await new Promise((resolve, reject) => {
+  return sender({
+    address,
+    url,
+    payload,
+    headers: {
+      Host: url.host,
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload),
+      "webhook-id": messageId,
+      "webhook-timestamp": Math.floor(
+        timestamp.getTime() / 1000
+      ).toString(),
+      "webhook-signature": signature,
+      ...(subscriptionId
+        ? { "X-MCP-Subscription-Id": subscriptionId }
+        : {})
+    }
+  });
+}
+
+function httpsSend({
+  address,
+  url,
+  headers,
+  payload
+}: Parameters<HttpsSender>[0]): Promise<WebhookResponse> {
+  return new Promise((resolve, reject) => {
     const request = https.request(
       {
         protocol: "https:",
@@ -194,19 +251,7 @@ async function signedPost(
         method: "POST",
         path: `${url.pathname}${url.search}`,
         servername: url.hostname,
-        headers: {
-          Host: url.host,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-          "webhook-id": messageId,
-          "webhook-timestamp": Math.floor(
-            timestamp.getTime() / 1000
-          ).toString(),
-          "webhook-signature": signature,
-          ...(subscriptionId
-            ? { "X-MCP-Subscription-Id": subscriptionId }
-            : {})
-        },
+        headers,
         lookup: (_hostname, _options, callback) => {
           callback(null, address, net.isIP(address));
         },
@@ -262,7 +307,12 @@ export async function verifyWebhookCallback(
   principal: string,
   subscriptionId: string
 ): Promise<void> {
-  const callbackUrl = (await validateWebhookUrl(delivery.url)).toString();
+  let callbackUrl: string;
+  try {
+    callbackUrl = (await validateWebhookUrl(delivery.url)).toString();
+  } catch (e: any) {
+    throw new WebhookError("invalid_callback_url", e?.message ?? String(e));
+  }
 
   if (isVerificationCached(principal, callbackUrl)) {
     return;
@@ -275,16 +325,26 @@ export async function verifyWebhookCallback(
     challenge
   });
 
-  const response = await signedPost(
-    callbackUrl,
-    delivery.secret,
-    `verify_${crypto.randomUUID()}`,
-    payload,
-    subscriptionId
-  );
+  let response: WebhookResponse;
+  try {
+    response = await signedPost(
+      callbackUrl,
+      delivery.secret,
+      `verify_${crypto.randomUUID()}`,
+      payload,
+      subscriptionId
+    );
+  } catch (e: any) {
+    const message = e?.message ?? String(e);
+    throw new WebhookError(
+      /timed out/i.test(message) ? "timeout" : "unreachable",
+      message
+    );
+  }
 
   if (response.status < 200 || response.status >= 300) {
-    throw new Error(
+    throw new WebhookError(
+      "http_status",
       `Webhook callback verification failed with HTTP ${response.status}`
     );
   }
@@ -294,22 +354,29 @@ export async function verifyWebhookCallback(
   try {
     parsed = JSON.parse(response.body);
   } catch {
-    throw new Error("Webhook callback verification returned invalid JSON");
+    throw new WebhookError(
+      "challenge_failed",
+      "Webhook callback verification returned invalid JSON"
+    );
   }
 
+  const echoed =
+    typeof parsed === "object" && parsed !== null
+      ? (parsed as { challenge?: unknown }).challenge
+      : undefined;
+  const expected = Buffer.from(challenge);
+  const received = typeof echoed === "string" ? Buffer.from(echoed) : null;
+
+  // Length check first: timingSafeEqual throws on unequal lengths.
   if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    !("challenge" in parsed) ||
-    (
-      typeof (parsed as { challenge?: unknown }).challenge !== "string" ||
-      !crypto.timingSafeEqual(
-        Buffer.from((parsed as { challenge: string }).challenge),
-        Buffer.from(challenge)
-      )
-    )
+    !received ||
+    received.length !== expected.length ||
+    !crypto.timingSafeEqual(received, expected)
   ) {
-    throw new Error("Webhook callback challenge mismatch");
+    throw new WebhookError(
+      "challenge_failed",
+      "Webhook callback challenge mismatch"
+    );
   }
 
   cacheVerification(principal, callbackUrl);
@@ -323,20 +390,29 @@ export async function deliverWebhook(
     name: string;
     timestamp: string;
     data: unknown;
-    cursor: string;
+    cursor: string | null;
   }
-): Promise<{ status: number; body: string }> {
+): Promise<WebhookResponse> {
   const payload = JSON.stringify(event);
 
   if (Buffer.byteLength(payload) > 256 * 1024) {
     throw new Error("Webhook event exceeds 256 KiB");
   }
 
+  // Dual-sign during the rotation window kept by events/subscribe.
+  const previousSecret =
+    delivery.previousSecret &&
+    delivery.previousSecretExpiresAt &&
+    Date.parse(delivery.previousSecretExpiresAt) > Date.now()
+      ? delivery.previousSecret
+      : undefined;
+
   return signedPost(
     delivery.url,
     delivery.secret,
     event.eventId,
     payload,
-    subscriptionId
+    subscriptionId,
+    previousSecret
   );
 }

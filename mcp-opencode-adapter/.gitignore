@@ -5,3 +5,8 @@ src/*.pre-cierre
 src/*.pre-stdio-factory
 .subscriptions.json
 .subscriptions.json.tmp
+.emitted-events.json
+.emitted-events.json.tmp
+.event-outbox.json
+.event-outbox.json.tmp
+.event-outbox.json.lock
