@@ -3,6 +3,14 @@
 Complementa, sin reemplazar, el checkpoint del 2026-10-06. Precedencia:
 evidencia reciente más evidencia histórica no contradicha.
 
+## INICIA Temporal V1 (obligatorio para este frente)
+
+Para trabajo en Temporal/OpenCode 4098, leer además
+[`docs/TEMPORAL_V1_MANIFEST.md`](docs/TEMPORAL_V1_MANIFEST.md) después de esta
+Guarda. El manifiesto conserva arquitectura experimental, contrato de
+supervisión, evidencia, DO_NOT_REPEAT y reenganche; GitHub no sustituye el
+estado runtime, que debe consultarse en Temporal y OpenCode antes de actuar.
+
 ## Estado de reenganche
 
 - Repositorio: `remc87-alt/Constructor-General-Linux`.

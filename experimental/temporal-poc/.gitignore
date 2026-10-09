@@ -1,0 +1,43 @@
+# Dependencies and generated build/test material
+node_modules/
+coverage/
+.cache/
+.tmp/
+tmp/
+
+# Runtime state, copies, and generated mission artifacts
+adapter-instance/
+opencode/
+workspaces/
+effects/
+logs/
+run/
+data/
+bin/
+dl/
+*.pid
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.wal
+*.shm
+*.log
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.secret
+*.password
+*.key
+*.pem
+
+# Generated outputs and temporary copies
+resultado.json
+process.py
+transcripcion.txt
+
+# Private acceptance material is installed outside the repository and must not
+# enter Git through a local POC copy.
+oracle-wrapper/private-suite/

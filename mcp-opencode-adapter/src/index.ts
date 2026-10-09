@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { registerEventHandlers } from "./events.ts";
 import { latestAssistant, MissionEventEmitter, runOpenCodeEventStream } from "./event-emitter.ts";
+import { getTemporalMission, startTemporalMission, temporalBridgeFromEnv } from "./temporal-bridge.ts";
 
 const BASE = process.env.OPENCODE_URL ?? "http://127.0.0.1:4096";
 const STATE_FILE = path.resolve(
@@ -30,6 +31,7 @@ function saveState(state: MissionMap) {
 }
 
 const missions = loadState();
+const temporalBridge = temporalBridgeFromEnv();
 
 function result(data: unknown) {
   return {
@@ -326,6 +328,33 @@ if (emitter) {
         }
       }
     );
+
+    // Experimental only: these tools are absent unless the isolated Temporal
+    // profile explicitly opts in, preserving the historical four-tool bridge.
+    if (temporalBridge) {
+      server.registerTool(
+        "start_temporal_mission",
+        {
+          description: "Start or reconcile one isolated Temporal generic mission.",
+          inputSchema: { workflow_id: z.string().regex(/^[a-z0-9][a-z0-9-]{2,119}$/), title: z.string().min(1).max(300), contract: z.unknown() }
+        },
+        async ({ workflow_id, title, contract }) => {
+          try { return result(await startTemporalMission(temporalBridge, { workflowId: workflow_id, title, contract })); }
+          catch (e: any) { return toolError(e?.message ?? String(e)); }
+        }
+      );
+      server.registerTool(
+        "get_temporal_mission",
+        {
+          description: "Read durable Temporal state for an isolated generic mission.",
+          inputSchema: { workflow_id: z.string().regex(/^[a-z0-9][a-z0-9-]{2,119}$/) }
+        },
+        async ({ workflow_id }) => {
+          try { return result(await getTemporalMission(temporalBridge, workflow_id)); }
+          catch (e: any) { return toolError(e?.message ?? String(e)); }
+        }
+      );
+    }
 
     registerEventHandlers(server, {
       // Notify still-pending permissions/questions right after subscribing.

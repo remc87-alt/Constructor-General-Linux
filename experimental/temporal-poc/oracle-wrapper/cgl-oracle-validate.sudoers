@@ -1,0 +1,4 @@
+# Exactly two opaque slugs. Install with visudo -cf before enabling.
+# Each pair identifies one sealed validation execution; no paths or shell syntax.
+rodrigo_mella ALL=(cgl_oracle) NOPASSWD: /usr/local/libexec/cgl-oracle-validate ^[a-z0-9][a-z0-9-]{2,119} [a-z0-9][a-z0-9-]{2,119}$
+rodrigo_mella ALL=(root) NOPASSWD: /usr/local/libexec/cgl-oracle-prepare ^[a-z0-9][a-z0-9-]{2,119} [a-z0-9][a-z0-9-]{2,119}$
