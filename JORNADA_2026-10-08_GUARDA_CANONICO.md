@@ -112,3 +112,39 @@ automáticamente.
 No versionar runtime, `.mission-map.json`, SQLite/WAL/SHM, logs, PID,
 contraseñas, cachés, secretos, resultados generados ni backups. Los scripts G2
 solo contienen variables de entorno y referencias por ruta.
+
+## Cierre de continuidad 2026-10-10
+
+- Rama experimental: `m03-g5-consolidation-20261008`.
+- HEAD local y remoto verificado: `69276a382e920b228a3d0d4f1896d444687e3b60`.
+- El único cambio local no rastreado identificado es `resultado.json`; fue
+  respaldado fuera de Git en `/tmp/cgl-mvp-checkpoint-20261010/` con hash
+  `bfcd6f0919b07f83a66e18b816fd360875b4a55f39f0e535ecb2d24b46014a38`.
+- No se publican secretos, suites privadas, workspaces, SQLite, logs ni estado
+  runtime. El checkout estable permanece intacto y no se limpia.
+- El respaldo externo 2026-10-10 incorpora snapshots SQLite con integridad
+  `ok`: Temporal `1ad3359bde53a25bc3892e4e7d8c08e040df842db16a53f0a3260b1cbe86cf8e`
+  y OpenCode experimental `c688f2ea586c96423b659cf88330ac50d9f968b3bac832813f8971700d458b22`.
+  Estos snapshots no sustituyen credenciales ni garantizan restauración en un
+  proceso activo sin verificación de compatibilidad.
+
+### G-01 a G-04 (definiciones del MVP)
+
+- **G-01 — Oráculo genérico:** PARCIAL. El contrato y la doble identidad son
+  genéricos, pero la suite efectiva validada sigue siendo `csv-expense-v1`.
+- **G-02 — Diagnósticos de reparación:** PARCIAL. Existen diagnósticos públicos
+  sanitizados y reparación en la misma sesión; falta cobertura accionable por
+  clase de fallo.
+- **G-03 — Permisos por misión:** PARCIAL. La detección y escalamiento existen;
+  falta una política interactiva plenamente asociada a misión/sesión.
+- **G-04 — Presupuesto total:** PARCIAL. Duración y reparaciones están acotadas;
+  no existe medición fiable de tokens ni un estado durable de presupuesto agotado.
+
+El worker y el runtime posteriores al checkpoint no tienen carga actual
+verificada en esta auditoría. La misión `cgl-v1-csv-expense-20261009-003`
+terminó `COMPLETED` pero con aceptación funcional `FAIL/BLOCKED`; no debe
+reutilizarse como PASS.
+
+Punto de reenganche: conservar runtime y respaldo externo, verificar cero
+workflows/permisos y la versión efectiva del worker, y solo después autorizar
+una misión supervisada nueva.

@@ -113,3 +113,29 @@ requiere autorización del Director, cero workflows activos, cero permisos
 pendientes, workspace nuevo con basename igual a `mission_id`, worker recargado
 y preflight de oráculo. No declarar Constructor operativo antes de PASS
 funcional independiente.
+
+## Addendum de continuidad — 2026-10-10
+
+El checkpoint documental publicado continúa siendo `69276a3` y la rama remota
+experimental coincide con el HEAD local. El laboratorio conserva `resultado.json`
+como artefacto no rastreado; existe un respaldo externo verificable y no se
+incorpora al repositorio.
+
+El respaldo externo ahora incluye snapshots SQLite de Temporal y OpenCode
+experimental, ambos con `integrity=ok`, conservando sus SHA256 en el manifiesto
+local. Los snapshots son evidencia de continuidad, no autorización para
+restaurar procesos ni sustituto de credenciales o configuración secreta.
+
+Estado MVP: G-01, G-02, G-03 y G-04 permanecen **PARCIALES** según sus
+definiciones canónicas del Director. No se agregan requisitos de n8n/PMO,
+MCP Events ni autonomía total a este alcance.
+
+La reconstrucción desde GitHub recupera código, contratos, pruebas y decisiones,
+pero no credenciales, suite privada, SQLite, sesiones OpenCode, historial
+Temporal, workspaces, logs ni resultados runtime. Estos elementos requieren
+respaldo externo seguro y permanecen excluidos por diseño.
+
+Última aceptación: `cgl-v1-csv-expense-20261009-003`, funcionalmente bloqueada;
+Temporal `COMPLETED` no equivale a aceptación. La versión efectiva del worker y
+la existencia actual de workflows/permisos no quedaron verificadas en este
+entorno restringido. No reiniciar ni recargar automáticamente.
