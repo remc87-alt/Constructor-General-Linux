@@ -138,3 +138,50 @@ experimental/temporal-poc/runtime-preflight.sh            # gates de runtime, si
 (cd mcp-opencode-adapter && npm test && npm run -s typecheck)  # 76
 for b in ~/cgl-mvp-backup-20261010 ~/cgl-v2-dd-backup-20261011 ~/cgl-v2-evolucion-backup-20261011; do (cd "$b" && sha256sum -c --quiet SHA256SUMS && echo "OK $b"); done
 ```
+
+## 10. Addendum 2026-10-12 (tarde) · `CGL-V2-G01-CODIGO-AISLAMIENTO-20261012`
+
+Prevalece sobre §4, §7 y §8 donde difiera.
+
+### 10.1 Resultado
+- **G01_CODIGO = PASS.** La §3 de G01 está implementada y probada en local, y revisada por ECC sin CRÍTICO ni ALTO abiertos en el código.
+- **G01_OPERATIVO = PENDIENTE.** No se instaló, ejecutó ni activó nada. No se usó sudo, salvo una sonda `sudo -n true` fallida y sin efecto, registrada en la Guarda.
+
+### 10.2 Matriz de evidencia (delta)
+
+| Capacidad | Clasificación | Evidencia |
+|---|---|---|
+| Raíz de workspaces configurable (`CGL_WORKSPACE_ROOT`), rechazo fuera de raíz, symlinks y traversal | **DEMOSTRADO en pruebas locales**; NO ACTIVADO | `test/g01-isolation.test.ts` |
+| `verifyOpenCodeWorkspace` sin `/proc/<pid>/cwd` (cmdline, Uid, listener, `GET /path`) | **DEMOSTRADO en pruebas locales** (con fakes); NO DEMOSTRADO contra un 4098 aislado | ídem, 26 casos negativos |
+| Workspace git propio (nuevo y existente, sin efectos parciales) | **DEMOSTRADO en pruebas locales** | ídem |
+| Lanzador `env -i` sin secretos heredados, con sondas de aislamiento | **DEMOSTRADO en copia redirigida**; NO INSTALADO | `test/g01_launcher_test.sh` 54/54 |
+| Wrappers del oráculo con `dir_fd`/`O_NOFOLLOW`/`O_NONBLOCK`/`nlink`/dueño | **DEMOSTRADO en pruebas locales**; NO INSTALADO | `test/oracle_g01_contract_test.py` |
+| Contratos Temporal/oráculo | **DEMOSTRADO en Temporal efímero 7263** | `test:validation` 87/87 |
+| Calidad de las pruebas | **DEMOSTRADO** | mutaciones 25/25 detectadas |
+| `external_directory` con worktree git | **NO DEMOSTRADO** (requiere el paso 8') | — |
+| Aislamiento WSL (interop y `/mnt/c`) | **FAIL hoy**: interop enabled y `/mnt/c` legible; el lanzador se niega a arrancar | §7.2 del procedimiento |
+
+### 10.3 Estado P0–P7
+
+| Gate | Estado |
+|---|---|
+| P0 | BLOQUEADO por G01_OPERATIVO (código listo) |
+| P1 | PARCIAL: demostrado en efímero, no activado |
+| P2 | PARCIAL |
+| P3 | PARCIAL |
+| P4 | PARCIAL: política más allowlist de config; bash automatizable solo tras G01 operativo |
+| P5 | DEMOSTRADO |
+| P6 | PARCIAL |
+| P7 | PENDIENTE |
+
+### 10.4 DO_NOT_REPEAT (adiciones)
+- No repetir la investigación del worktree `/`: está verificada en el binario 1.18.34 (`Project.resolve` y `repo.discover`; sin repo git, worktree `/`; repo de otro dueño sin `safe.directory`, también `/`).
+- No repetir el diseño ni la revisión G01: hay dos rondas de architect y de security-reviewer, más code-reviewer y pr-test-analyzer.
+- **Nunca ejecutar `cgl-exec-opencode stop` como `rodrigo_mella`**, ni copias de prueba con `stop`: hace `kill -1` como el usuario que lo invoca.
+- No usar `scripts/install-oracle-concurrency.sh` para G01: sus pines son de los wrappers del 2026-10-09. Usar §7.3, paso 6'.
+- No aplicar `chown -R` sobre el home ni sobre `config/` del ejecutor.
+
+### 10.5 Próximo gate exacto
+1. **Decisión del Director y del usuario** sobre el paso 4b: desactivar interop de WSL y restringir `/mnt/c`. Requiere `wsl --shutdown`, que reinicia todos los servicios WSL.
+2. **Persona administradora:** los pasos 1, 2', 3, 4', 4b, 5', 6', 7 y 8' de `G01_AISLAMIENTO_PROCEDIMIENTO.md` §7.3, verificando cada uno.
+3. **Gate §5 más §7.4.** Después: `poc.env` exporta `CGL_WORKSPACE_ROOT` y `CGL_OPENCODE_USER`, se sincroniza `adapter-instance`, se recarga el worker y se ejecuta **una** E2E CSV sintética.

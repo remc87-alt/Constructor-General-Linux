@@ -253,3 +253,16 @@ Mitigaciones que requieren sudo, por prioridad:
   - OpenCode reporta `worktree: "/"` porque el workspace no es repo git, así que `external_directory` queda NO DEMOSTRADO.
   - La raíz de workspaces está fija dentro de `~rodrigo_mella`, tanto en el contrato como en los wrappers del oráculo.
 - **Continuidad vigente:** `docs/CONTINUIDAD_2026-10-12.md`.
+
+### Addendum 2026-10-12 · G01 código (`CGL-V2-G01-CODIGO-AISLAMIENTO-20261012`)
+
+- **§3 de G01 IMPLEMENTADA y PROBADA en local; NO instalada ni activada.**
+  - Nuevos: `src/workspace.ts` (raíz configurable, workspace git, identidad del servidor) y `src/workspace-setup.ts`.
+  - `executor/`: el lanzador `cgl-exec-opencode`, `cgl-exec.sudoers` y `cgl-exec-netfilter`.
+  - Wrappers del oráculo con raíz fija `/srv/cgl/workspaces` y acceso `dir_fd`.
+- **Contratos:**
+  - `workflow_id == missionId == basename(workspace)` se mantiene; el workspace debe ser hijo directo de la raíz.
+  - `verifyOpenCodeWorkspace` devuelve `{pid, cwd, uid}`; los workflows no cambian.
+  - Pruebas: `test:validation` 87/87 con Temporal efímero 7263; adaptador 76/76 (`typecheck` OK); oráculo PASS; lanzador 54/54; mutaciones 25/25.
+- **Modo legado:** es el predeterminado si no se definen `CGL_WORKSPACE_ROOT` ni `CGL_OPENCODE_USER`. Con los wrappers nuevos instalados, el oráculo solo acepta `/srv/cgl/workspaces`.
+- **Procedimiento vigente:** `docs/G01_AISLAMIENTO_PROCEDIMIENTO.md` §7.

@@ -176,3 +176,20 @@ Complementa sin reemplazar. Es el punto de entrada vigente: `docs/CONTINUIDAD_20
   - No se reinició nada.
 
 Punto de reenganche: `docs/CONTINUIDAD_2026-10-12.md` §8.
+
+## Addendum 2026-10-12 (tarde) · Misión `CGL-V2-G01-CODIGO-AISLAMIENTO-20261012`
+
+- **Resultado:** G01_CODIGO = PASS (código, pruebas y revisión ECC). G01_OPERATIVO = PENDIENTE: requiere la intervención administrativa §7 de `docs/G01_AISLAMIENTO_PROCEDIMIENTO.md`.
+- **ECC realmente invocado:**
+  - `ecc:architect` y `ecc:security-reviewer`, 2× cada uno (diseño y código);
+  - `ecc:code-reviewer`;
+  - `ecc:pr-test-analyzer`;
+  - skill `ecc:verification-loop`.
+- **Runtime:** sin cambios.
+  - Temporal 7243 con 0 workflows en ejecución.
+  - Worker con pid 2262122.
+  - OpenCode 4098 con pid 1428947, healthy.
+  - No se reinició, instaló ni activó nada.
+- **Incidencia registrada:** se ejecutó `sudo -n true` una vez, como sonda no interactiva. Falló («a password is required») y no tuvo efecto. Queda registrada aquí por transparencia.
+
+Punto de reenganche: `docs/CONTINUIDAD_2026-10-12.md` §10.

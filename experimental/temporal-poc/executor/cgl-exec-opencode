@@ -1,0 +1,126 @@
+#!/bin/bash
+# G01 fixed launcher: runs the POC OpenCode server as the dedicated executor.
+# Install (admin, procedure §4 step 6): root:root 0755 /usr/local/libexec/cgl-exec-opencode
+# Only entry points (sudoers, see cgl-exec.sudoers):
+#   sudo -n -u cgl_exec /usr/local/libexec/cgl-exec-opencode start <mission-id>   (server password on stdin)
+#   sudo -n -u cgl_exec /usr/local/libexec/cgl-exec-opencode stop
+# Nothing here is read from the caller's environment: paths are constants and
+# the server gets a fresh env -i. Every check fails closed before the exec.
+set -euo pipefail
+unset BASH_ENV ENV CDPATH GLOBIGNORE
+IFS=$' \t\n'
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 0007
+
+readonly EXEC_USER=cgl_exec
+readonly ROOT=/srv/cgl/workspaces
+readonly EXEC_HOME=/var/lib/cgl-exec
+readonly OC_STATE=/var/lib/cgl-exec/opencode
+readonly OC_BIN=/usr/local/lib/cgl-exec/opencode
+readonly ORCHESTRATOR_HOME=/home/rodrigo_mella
+readonly PORT=4098
+readonly SLUG='^[a-z0-9][a-z0-9-]{2,119}$'
+readonly PASSWORD_RE='^[A-Za-z0-9]{20,128}$'
+# Services the executor must NOT reach (Temporal gRPC/HTTP/UI, other OpenCode).
+readonly FORBIDDEN=(127.0.0.1/7243 127.0.0.1/7244 127.0.0.1/8243 127.0.0.1/4096 127.0.0.1/4097 ::1/7243 ::1/7244)
+readonly PROVIDER=127.0.0.1/3001
+
+die() { printf 'cgl-exec-opencode: %s\n' "$*" >&2; exit 1; }
+reachable() { timeout 3 bash -c 'exec 3<>"/dev/tcp/$1/$2"' _ "${1%/*}" "${1##*/}" 2>/dev/null; }
+uid_of() { stat -c %u -- "$1"; }
+mode_of() { stat -c %a -- "$1"; }
+# Root-owned and not writable by group/others, for the file and every parent.
+root_chain() {
+  local p="$1"
+  while :; do
+    [[ ! -L "$p" && "$(uid_of "$p")" == 0 ]] || return 1
+    (( (8#$(mode_of "$p") & 8#022) == 0 )) || return 1
+    [[ "$p" == / ]] && return 0
+    p="$(dirname -- "$p")"
+  done
+}
+server_pids() { pgrep -u "$EXEC_USER" -x -f "$OC_BIN serve --hostname 127.0.0.1 --port $PORT" || true; }
+# Executor processes outside this launcher's own process group (its command
+# substitutions and pipes share that group; the server never does).
+others() {
+  local own
+  own="$(ps -o pgid= -p "$$" | tr -d ' ')"
+  ps -u "$EXEC_USER" -o pid=,pgid= | awk -v own="$own" '$2 != own { print $1 }'
+}
+
+[[ "$(id -u)" != 0 && "$(id -un)" == "$EXEC_USER" ]] || die "must run as $EXEC_USER (never root)"
+SELF_UID="$(id -u)"
+
+isolation_probes() {
+  local target interop
+  for target in "${FORBIDDEN[@]}"; do reachable "$target" && die "network filter missing: $target reachable"; done
+  reachable "$PROVIDER" || die "model provider $PROVIDER unreachable"
+  [[ -e /var/run/docker.sock && -w /var/run/docker.sock ]] && die "docker socket writable"
+  [[ -r "$ORCHESTRATOR_HOME" || -x "$ORCHESTRATOR_HOME" ]] && die "orchestrator home accessible"
+  for interop in /proc/sys/fs/binfmt_misc/WSLInterop*; do
+    [[ -e "$interop" && "$(head -n1 -- "$interop")" == enabled ]] && die "WSL interop enabled"
+  done
+  [[ -r /mnt/c ]] && die "Windows drive mounted and readable"
+  return 0
+}
+
+start() {
+  local slug="$1" password ws owner
+  [[ "$slug" =~ $SLUG ]] || die "invalid mission id"
+  IFS= read -r -t 5 password || die "server password expected on stdin"
+  [[ "$password" =~ $PASSWORD_RE ]] || die "invalid server password format"
+  exec </dev/null
+
+  [[ "$(realpath -e -- "$ROOT")" == "$ROOT" ]] || die "workspace root must not traverse symlinks"
+  ws="$ROOT/$slug"
+  [[ -d "$ws" && ! -L "$ws" && "$(realpath -e -- "$ws")" == "$ws" ]] || die "workspace must be a real directory under $ROOT"
+  owner="$(uid_of "$ws")"
+  [[ "$owner" != "$SELF_UID" && "$owner" != 0 ]] || die "workspace must be owned by the orchestrator"
+  [[ "$(mode_of "$ws")" == 3770 ]] || die "workspace mode must be 3770"
+  [[ -d "$ws/.git" && ! -L "$ws/.git" && "$(uid_of "$ws/.git")" == "$owner" ]] || die "workspace must have its own orchestrator-owned .git"
+  [[ -f "$ws/opencode.json" && ! -L "$ws/opencode.json" && "$(uid_of "$ws/opencode.json")" == "$owner" ]] || die "orchestrator-owned opencode.json required"
+  [[ ! -e "$ws/.opencode" && ! -e "$ws/opencode.jsonc" ]] || die "project-level OpenCode overrides are not allowed"
+
+  { [[ -f "$OC_BIN" && -x "$OC_BIN" ]] && root_chain "$OC_BIN"; } || die "$OC_BIN must be a root-owned executable in a root-owned path"
+  [[ -d "$OC_STATE/config/opencode" && "$(uid_of "$OC_STATE/config")" == 0 && "$(uid_of "$OC_STATE/config/opencode")" == 0 ]] || die "executor config must be root-owned (the agent must not rewrite its policy)"
+  local cfg="$OC_STATE/config/opencode/opencode.jsonc"
+  [[ -f "$cfg" && ! -L "$cfg" && "$(uid_of "$cfg")" == 0 ]] && (( (8#$(mode_of "$cfg") & 8#022) == 0 )) || die "executor opencode.jsonc must be root-owned and not writable"
+  # OpenCode also reads $HOME/.opencode and dotfiles: the home must be root-owned.
+  [[ ! -L "$EXEC_HOME" && "$(uid_of "$EXEC_HOME")" == 0 ]] && (( (8#$(mode_of "$EXEC_HOME") & 8#022) == 0 )) || die "executor home must be root-owned and not writable"
+  [[ -z "$(server_pids)" ]] || die "an executor OpenCode server is already running"
+  isolation_probes
+
+  # RLIMIT_NPROC counts every thread of the uid (idle OpenCode ~50).
+  ulimit -c 0
+  ulimit -u 1024
+  ulimit -n 4096
+  ulimit -f 4194304
+  cd -- "$ws"
+  exec >>"$OC_STATE/log/opencode.log" 2>&1
+  exec env -i \
+    HOME="$EXEC_HOME" USER="$EXEC_USER" LOGNAME="$EXEC_USER" PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 \
+    XDG_CONFIG_HOME="$OC_STATE/config" XDG_DATA_HOME="$OC_STATE/data" XDG_STATE_HOME="$OC_STATE/state" XDG_CACHE_HOME="$OC_STATE/cache" \
+    OPENCODE_SERVER_PASSWORD="$password" OPENCODE_DISABLE_AUTOUPDATE=1 OPENCODE_DISABLE_MODELS_FETCH=1 OPENCODE_DISABLE_LSP_DOWNLOAD=1 \
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ws" \
+    "$OC_BIN" serve --hostname 127.0.0.1 --port "$PORT"
+}
+
+# Ends EVERY process of the executor uid (server, agent shells, setsid/nohup
+# leftovers), not only a pidfile the agent could rewrite.
+stop() {
+  kill -TERM -1 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    [[ -z "$(others)" ]] && { echo "stopped"; return 0; }
+    sleep 0.5
+  done
+  kill -KILL -1 2>/dev/null || true
+  sleep 0.5
+  [[ -z "$(others)" ]] || die "executor processes survived SIGKILL"
+  echo "stopped (killed)"
+}
+
+case "${1:-} $#" in
+  "start 2") start "$2" ;;
+  "stop 1") stop ;;
+  *) die "usage: cgl-exec-opencode start <mission-id> | stop" ;;
+esac

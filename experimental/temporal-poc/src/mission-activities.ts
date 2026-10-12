@@ -11,6 +11,7 @@ import { parsePublicOracleResult, publicOracleResultPath, validateOracleExecutio
 import { checkpointDue, checkpointFromObservation, type MissionCheckpoint } from "./mission-checkpoint.ts";
 import { authorizedOracleSuite } from "./oracle-registry.ts";
 import { openCodePolicyViolations } from "./opencode-policy.ts";
+import { expectedExecutor, gitWorkspaceViolation, ISOLATED_WORKSPACE_ROOT, verifyServerIdentity, workspaceConfigViolation, workspaceRoot } from "./workspace.ts";
 
 // G04: every external effect re-checks the absolute mission deadline, so a
 // Temporal retry scheduled before the deadline cannot act after it.
@@ -122,6 +123,9 @@ export async function prepareGenericMission(input: { contract: unknown }) {
   if (!fs.existsSync(configPath)) {
     throw ApplicationFailure.nonRetryable("generic contract: opencode.json missing");
   }
+  // G01: ownership, git and project-config checks (squatting, replaced policy).
+  const workspaceViolation = workspaceConfigViolation(contract.workspace) ?? gitWorkspaceViolation(contract.workspace);
+  if (workspaceViolation) throw ApplicationFailure.nonRetryable(`generic contract: workspace rejected: ${workspaceViolation}`);
   let config: unknown;
   try { config = JSON.parse(fs.readFileSync(configPath, "utf8")); } catch { throw ApplicationFailure.nonRetryable("generic contract: opencode.json unreadable"); }
   const violations = openCodePolicyViolations(config, contract.artifactPaths);
@@ -131,18 +135,40 @@ export async function prepareGenericMission(input: { contract: unknown }) {
   return contract;
 }
 
-// POST /session has no cwd argument. Verify the server's actual cwd before an
-// external start, preventing a generic mission from silently using T6's cwd.
-export async function verifyOpenCodeWorkspace(input: { workspace: string }) {
-  const pid = fs.readFileSync(path.join(ROOT, "run/opencode-t3.pid"), "utf8").trim();
-  if (!/^[1-9][0-9]*$/.test(pid)) throw ApplicationFailure.nonRetryable("generic contract: invalid OpenCode pidfile");
-  const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, "utf8").replaceAll("\0", " ");
-  if (!cmdline.includes("opencode serve --hostname 127.0.0.1 --port 4098")) {
-    throw ApplicationFailure.nonRetryable("generic contract: pidfile is not the POC OpenCode server");
+// POST /session has no cwd argument. Verify the server's identity and its
+// resolved directory/worktree before an external start. G01: the server may
+// run as cgl_exec, whose /proc/<pid>/cwd is unreadable (EPERM), so identity
+// comes from cmdline, Uid, the 4098 listener owner and GET /path; any
+// inconsistency fails closed.
+async function openCodePath(): Promise<unknown> {
+  const password = fs.readFileSync(`${ROOT}/run/opencode-t3.password`, "utf8").trim();
+  const response = await fetch(`${OC_URL}/path`, {
+    headers: { authorization: `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}` },
+    signal: AbortSignal.timeout(5_000)
+  });
+  if (!response.ok) throw new Error(`GET /path returned ${response.status}`);
+  return response.json();
+}
+
+export type VerifyOpenCodeDeps = { env: NodeJS.ProcessEnv; pidFile: string; readProc: (file: string) => string; getPath: () => Promise<unknown>; passwd?: () => string };
+const defaultVerifyDeps = (): VerifyOpenCodeDeps => ({ env: process.env, pidFile: path.join(ROOT, "run/opencode-t3.pid"), readProc: (file) => fs.readFileSync(file, "utf8"), getPath: openCodePath });
+
+// deps are injectable for tests only; the activity always uses the defaults.
+export async function verifyOpenCodeWorkspace(input: { workspace: string }, deps: VerifyOpenCodeDeps = defaultVerifyDeps()) {
+  const reject = (message: string): never => { throw ApplicationFailure.nonRetryable(`generic contract: ${message}`); };
+  try {
+    const executor = expectedExecutor(deps.env, deps.passwd);
+    if (executor.isolated && workspaceRoot(deps.env) !== ISOLATED_WORKSPACE_ROOT) reject("isolated executor requires CGL_WORKSPACE_ROOT=/srv/cgl/workspaces");
+    const pid = fs.readFileSync(deps.pidFile, "utf8").trim();
+    const verified = await verifyServerIdentity({
+      pid, workspace: fs.realpathSync(input.workspace), expectedUid: executor.uid, expectedHome: executor.home, allowedBins: executor.bins,
+      readProc: deps.readProc, getPath: deps.getPath
+    });
+    return { pid: verified.pid, cwd: verified.directory, uid: verified.uid };
+  } catch (error) {
+    if (error instanceof ApplicationFailure) throw error;
+    return reject(`OpenCode workspace verification failed: ${(error as Error).message}`);
   }
-  const cwd = fs.realpathSync(`/proc/${pid}/cwd`);
-  if (cwd !== fs.realpathSync(input.workspace)) throw ApplicationFailure.nonRetryable("generic contract: OpenCode cwd does not match workspace");
-  return { pid, cwd };
 }
 
 export type McpCall = (name: string, args: Record<string, unknown>) => Promise<{ isError: boolean; data: any }>;

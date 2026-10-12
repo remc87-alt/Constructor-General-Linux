@@ -1,0 +1,62 @@
+#!/bin/bash
+# G01 executor network filter (procedure §7, step 4). Idempotent: safe to run
+# at every WSL2 boot ([boot] command in /etc/wsl.conf) and by hand.
+# Install: root:root 0755 /usr/local/sbin/cgl-exec-netfilter
+#   cgl-exec-netfilter apply | check | remove
+# cgl_exec may only open TCP to the model provider 127.0.0.1:3001 and answer
+# connections made to its own listener (ESTABLISHED). Everything else, every
+# protocol and all of IPv6, is rejected. The jump sits at the top of OUTPUT so
+# earlier ACCEPT rules (docker, WSL) cannot pre-empt it.
+set -euo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+readonly USER_NAME=cgl_exec CHAIN=CGL_EXEC_OUT
+[[ "$(id -u)" == 0 ]] || { echo "cgl-exec-netfilter: must run as root" >&2; exit 1; }
+id -u "$USER_NAME" >/dev/null
+
+jump() { "$1" "$2" OUTPUT -m owner --uid-owner "$USER_NAME" -j "$CHAIN"; }
+# Builds the new chain completely, points the top-of-OUTPUT jump at it, and only
+# then drops the old one: a reload never leaves cgl_exec unfiltered.
+apply() {
+  local t new="${CHAIN}_NEW"
+  for t in iptables ip6tables; do
+    "$t" -D OUTPUT -m owner --uid-owner "$USER_NAME" -j "$new" 2>/dev/null || true
+    "$t" -F "$new" 2>/dev/null || true
+    "$t" -X "$new" 2>/dev/null || true
+    "$t" -N "$new"
+    if [[ "$t" == iptables ]]; then
+      "$t" -A "$new" -d 127.0.0.1/32 -p tcp --dport 3001 -j ACCEPT
+      "$t" -A "$new" -m conntrack --ctstate ESTABLISHED -p tcp -j ACCEPT
+    fi
+    "$t" -A "$new" -j REJECT
+    "$t" -I OUTPUT 1 -m owner --uid-owner "$USER_NAME" -j "$new"
+    while jump "$t" -C 2>/dev/null; do jump "$t" -D; done
+    "$t" -F "$CHAIN" 2>/dev/null || true
+    "$t" -X "$CHAIN" 2>/dev/null || true
+    "$t" -E "$new" "$CHAIN"
+  done
+}
+check() {
+  local t ok=0
+  for t in iptables ip6tables; do
+    jump "$t" -C 2>/dev/null || { echo "MISSING jump in $t OUTPUT"; ok=1; }
+    # Line 1 of -S is the policy; the jump must be the first rule (line 2).
+    [[ "$("$t" -S OUTPUT | grep -n -- "-j $CHAIN" | cut -d: -f1 | head -1)" == 2 ]] || { echo "jump is not the first OUTPUT rule in $t"; ok=1; }
+    "$t" -C "$CHAIN" -j REJECT 2>/dev/null || { echo "MISSING final REJECT in $t"; ok=1; }
+  done
+  [[ "$ok" == 0 ]] && echo "cgl-exec-netfilter: OK"
+  return "$ok"
+}
+remove() {
+  local t
+  for t in iptables ip6tables; do
+    while jump "$t" -C 2>/dev/null; do jump "$t" -D; done
+    "$t" -F "$CHAIN" 2>/dev/null || true
+    "$t" -X "$CHAIN" 2>/dev/null || true
+  done
+}
+case "${1:-} $#" in
+  "apply 1") apply; check ;;
+  "check 1") check ;;
+  "remove 1") remove ;;
+  *) echo "usage: cgl-exec-netfilter apply|check|remove" >&2; exit 2 ;;
+esac

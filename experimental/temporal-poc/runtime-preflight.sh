@@ -35,9 +35,13 @@ else
   gate "opencode 4098 credentials" ko "password file missing"
 fi
 if [[ -n "${1:-}" ]]; then
+  # G01: /proc/<pid>/cwd is unreadable when 4098 runs as cgl_exec; the server's
+  # own GET /path is the source of truth (directory and worktree = workspace).
   ws="$(realpath -e -- "$1" 2>/dev/null || true)"
-  ocpid="$(cat "$POC_RUN/opencode-t3.pid" 2>/dev/null || true)"
-  [[ -n "$ws" && -n "$ocpid" && "$(realpath "/proc/$ocpid/cwd" 2>/dev/null)" == "$ws" ]] && gate "opencode cwd = workspace" ok || gate "opencode cwd = workspace" ko "restart 4098 on this workspace"
+  paths="$( [[ -s "$PASSFILE" ]] && curl "${auth[@]}" http://127.0.0.1:4098/path 2>/dev/null || true)"
+  dir="$(sed -n 's/.*"directory":"\([^"]*\)".*/\1/p' <<<"$paths")"
+  tree="$(sed -n 's/.*"worktree":"\([^"]*\)".*/\1/p' <<<"$paths")"
+  [[ -n "$ws" && "$dir" == "$ws" && "$tree" == "$ws" ]] && gate "opencode directory/worktree = workspace" ok || gate "opencode directory/worktree = workspace" ko "directory=${dir:-?} worktree=${tree:-?}"
 fi
 echo "preflight: $fails failing gate(s)"
 exit $(( fails > 0 ))

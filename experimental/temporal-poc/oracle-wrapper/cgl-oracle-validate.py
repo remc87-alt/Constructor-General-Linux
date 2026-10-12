@@ -7,7 +7,7 @@ JOB_ROOT = Path("/etc/cgl-oracle/jobs")
 TEST_ROOT = Path("/var/lib/cgl-oracle/tests")
 PRIVATE_RESULTS = Path("/var/lib/cgl-oracle/results")
 PUBLIC_RESULTS = Path("/var/lib/cgl-oracle-public-results")
-WORKSPACE_ROOT = Path("/home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces")
+WORKSPACE_ROOT = Path("/srv/cgl/workspaces")  # G01: fixed, matches cgl-oracle-prepare ROOT
 STAGE_ROOT = Path("/var/lib/cgl-oracle/jobs")
 TARGET = Path("/usr/local/libexec/cgl-oracle-target")
 IDENTITY = re.compile(r"[a-z0-9][a-z0-9-]{2,119}")
@@ -76,9 +76,11 @@ def main() -> None:
         raise SystemExit(0 if final["status"] == "passed" else 1 if final["status"] == "failed" else 2)
     private = result_path(PRIVATE_RESULTS, mission_id, execution_id)
     job = read_job(JOB_ROOT / result_name(mission_id, execution_id), mission_id, execution_id)
-    source_workspace = Path(job.get("source_workspace", "")).resolve()
+    # Exact string written by root in prepare; never resolved (cgl_oracle cannot
+    # traverse the executor workspace and must not follow its symlinks).
+    source_workspace = Path(str(job.get("source_workspace", "")))
     workspace, suite = Path(job.get("workspace", "")).resolve(), job.get("suite", "")
-    if WORKSPACE_ROOT not in source_workspace.parents or source_workspace.name != mission_id: fail("source workspace outside POC root", private, mission_id, execution_id)
+    if source_workspace != WORKSPACE_ROOT / mission_id: fail("source workspace outside POC root", private, mission_id, execution_id)
     if workspace != (STAGE_ROOT / mission_id / execution_id).resolve() or not workspace.is_dir(): fail("staged workspace identity conflict", private, mission_id, execution_id)
     staged = workspace.stat()
     if staged.st_uid != 0 or stat.S_IMODE(staged.st_mode) != 0o750: fail("unsafe staged workspace", private, mission_id, execution_id)

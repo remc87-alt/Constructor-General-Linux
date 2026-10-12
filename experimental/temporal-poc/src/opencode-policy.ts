@@ -28,6 +28,7 @@ export function missionOpenCodeConfig(artifactPaths: string[]) {
   return { $schema: "https://opencode.ai/config.json", permission: missionOpenCodePolicy(artifactPaths) };
 }
 
+const ALLOWED_CONFIG_KEYS = new Set(["$schema", "permission"]);
 const isAction = (value: unknown): value is Action => value === "allow" || value === "ask" || value === "deny";
 
 // Returns the list of violations; empty means the policy is acceptable.
@@ -35,6 +36,11 @@ export function openCodePolicyViolations(config: unknown, artifactPaths: string[
   const permission = (config as any)?.permission;
   if (!permission || typeof permission !== "object" || Array.isArray(permission)) return ["permission block missing"];
   const errors: string[] = [];
+  // G01: project config overrides the executor's global config, so a mission
+  // workspace may only carry the permission block (no provider, plugin, mcp,
+  // model, instructions or {env:}/{file:} substitutions).
+  for (const key of Object.keys(config as object)) if (!ALLOWED_CONFIG_KEYS.has(key)) errors.push(`config key not allowed: ${key}`);
+  if (/\{(env|file):/.test(JSON.stringify(config))) errors.push("config substitutions are not allowed");
   const rule = (tool: string): Rule | undefined => permission[tool];
   const fallback = rule("*");
   if (fallback !== "ask" && fallback !== "deny") errors.push(`"*" must be ask or deny`);

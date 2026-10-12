@@ -1,10 +1,11 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { ApplicationFailure } from "@temporalio/activity";
 import { authorizedOracleSuite } from "./oracle-registry.ts";
+import { LEGACY_WORKSPACE_ROOT, workspaceRoot } from "./workspace.ts";
 
-export const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".local/state/constructor-temporal-poc/workspaces");
+// Legacy default; CGL_WORKSPACE_ROOT (G01: /srv/cgl/workspaces) overrides it.
+export const DEFAULT_WORKSPACE_ROOT = LEGACY_WORKSPACE_ROOT;
 
 export type GenericValidationPolicy = {
   kind: "external-oracle";
@@ -35,9 +36,10 @@ const text = (value: unknown, field: string, max = 12_000): string => {
 const safeRelative = (value: unknown, field: string): string => {
   const candidate = text(value, field, 300);
   if (path.isAbsolute(candidate) || candidate === "." || candidate.split(/[\\/]+/).includes("..")) fail(`${field} must be a relative child path`);
+  // Artifacts become OpenCode permission patterns: no glob metacharacters.
+  if (/[*?[\]{}!]/.test(candidate)) fail(`${field} must not contain glob characters`);
   return candidate;
 };
-const childOf = (child: string, parent: string) => child === parent || child.startsWith(parent + path.sep);
 
 // Strict by design: a generic request cannot redirect the POC to an arbitrary
 // directory or smuggle an oracle path into its artifacts.
@@ -45,12 +47,14 @@ export function validateGenericMissionContract(input: unknown, options: Contract
   const raw = record(input, "input");
   const missionId = text(raw.missionId, "missionId", 120);
   if (!/^[a-z0-9][a-z0-9-]{2,119}$/.test(missionId)) fail("missionId must be lowercase slug syntax");
-  const workspaceRoot = fs.realpathSync(options.workspaceRoot ?? DEFAULT_WORKSPACE_ROOT);
+  let root = "";
+  try { root = options.workspaceRoot ? fs.realpathSync(options.workspaceRoot) : workspaceRoot(); } catch (error) { fail(`workspace root unavailable: ${(error as Error).message}`); }
   const requestedWorkspace = text(raw.workspace, "workspace", 1_000);
   if (!path.isAbsolute(requestedWorkspace)) fail("workspace must be absolute");
   let workspace: string;
   try { workspace = fs.realpathSync(requestedWorkspace); } catch { fail("workspace must already exist"); }
-  if (!childOf(workspace, workspaceRoot) || workspace === workspaceRoot) fail("workspace must be a child of the POC workspace root");
+  // Direct child only: the oracle derives the source as WORKSPACE_ROOT / mission_id.
+  if (path.dirname(workspace) !== root) fail("workspace must be a child of the POC workspace root");
   // The isolated oracle receives only opaque mission/execution identities and
   // derives its source path as WORKSPACE_ROOT / mission_id. Require that same
   // binding before any external Temporal or OpenCode work begins.

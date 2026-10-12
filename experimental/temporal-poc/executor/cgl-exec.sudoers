@@ -1,0 +1,6 @@
+# G01 (procedure §4 step 6). Install as root:root 0440 /etc/sudoers.d/cgl-exec
+# after `visudo -cf`. Exactly two forms; the mission id is an opaque slug, no
+# paths or shell syntax. The launcher re-validates and uses env -i.
+Defaults!/usr/local/libexec/cgl-exec-opencode env_reset, !setenv
+rodrigo_mella ALL=(cgl_exec) NOPASSWD: /usr/local/libexec/cgl-exec-opencode ^start [a-z0-9][a-z0-9-]{2,119}$
+rodrigo_mella ALL=(cgl_exec) NOPASSWD: /usr/local/libexec/cgl-exec-opencode ^stop$
