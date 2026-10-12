@@ -1,0 +1,24 @@
+// G01 lab: global config of the executor OpenCode (no secrets in this file).
+// Install: root:cgl_exec 0640 /var/lib/cgl-exec/opencode/config/opencode/opencode.jsonc
+// Key:     root:cgl_exec 0640 /var/lib/cgl-exec/opencode/config/opencode/freellm.key
+//          NEW key dedicated to the executor with minimum quota (procedure step 7);
+//          never the orchestrator's key. The agent can read it (same uid).
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "share": "disabled",
+  "provider": {
+    "freellmapi": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "FreeLLMAPI (cgl_exec)",
+      "options": {
+        "baseURL": "http://127.0.0.1:3001/v1",
+        "apiKey": "{file:/var/lib/cgl-exec/opencode/config/opencode/freellm.key}"
+      },
+      "models": { "nemotron-3-super-120b": { "name": "Nemotron 3 Super 120B" } }
+    }
+  },
+  "enabled_providers": ["freellmapi"],
+  "model": "freellmapi/nemotron-3-super-120b",
+  "small_model": "freellmapi/nemotron-3-super-120b"
+}

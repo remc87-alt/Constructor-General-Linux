@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# G01 lab: Bubblewrap sandbox for the executor OpenCode server.
+# Install: root:root 0755 /usr/local/lib/cgl-exec/cgl-bwrap-wrapper
+# Only caller: cgl-exec-opencode.bwrap (already env -i, cwd = workspace).
+#   cgl-bwrap-wrapper --workspace /srv/cgl/workspaces/<mission-id>
+# The command inside the sandbox is fixed: no argument reaches an exec.
+# Only the authorized workspace is mounted read-write; other workspaces, the
+# orchestrator home, /mnt, /run (WSL interop sockets), /init and docker.sock
+# are not mounted. The network namespace is shared on purpose: 4098 must be
+# reachable by the orchestrator, so egress stays enforced by cgl-exec-netfilter.
+set -euo pipefail
+PATH=/usr/bin:/bin
+
+readonly ROOT=/srv/cgl/workspaces
+readonly OC_STATE=/var/lib/cgl-exec/opencode
+readonly SLUG='^[a-z0-9][a-z0-9-]{2,119}$'
+
+[[ "$(id -u)" != 0 && "$(id -un)" == cgl_exec ]] || exit 80
+[[ $# -eq 2 && "$1" == "--workspace" ]] || exit 81
+WS="$2"
+[[ "$(dirname -- "$WS")" == "$ROOT" && "$(basename -- "$WS")" =~ $SLUG ]] || exit 82
+[[ -d "$WS" && ! -L "$WS" && "$(realpath -e -- "$WS")" == "$WS" ]] || exit 83
+[[ "$(stat -c %a -- "$WS")" == 3770 ]] || exit 84
+[[ -n "${OPENCODE_SERVER_PASSWORD:-}" ]] || exit 85
+
+exec /usr/bin/bwrap \
+  --unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup-try \
+  --die-with-parent --new-session --cap-drop ALL \
+  --proc /proc --dev /dev --tmpfs /tmp \
+  --ro-bind /usr /usr \
+  --symlink usr/bin /bin --symlink usr/sbin /sbin \
+  --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
+  --ro-bind /etc/passwd /etc/passwd --ro-bind /etc/group /etc/group \
+  --ro-bind-try /etc/ssl /etc/ssl --ro-bind-try /etc/ca-certificates /etc/ca-certificates \
+  --ro-bind-try /etc/localtime /etc/localtime \
+  --ro-bind /usr/local/lib/cgl-exec /usr/local/lib/cgl-exec \
+  --ro-bind /var/lib/cgl-exec /var/lib/cgl-exec \
+  --bind "$OC_STATE/data" "$OC_STATE/data" \
+  --bind "$OC_STATE/state" "$OC_STATE/state" \
+  --bind "$OC_STATE/cache" "$OC_STATE/cache" \
+  --bind "$OC_STATE/log" "$OC_STATE/log" \
+  --bind "$WS" "$WS" \
+  --chdir "$WS" \
+  -- /usr/bin/bash -c '
+    test ! -e /mnt/c || exit 91
+    test ! -e /init || exit 92
+    test ! -e /proc/sys/fs/binfmt_misc/WSLInterop || exit 93
+    test ! -e /run/WSL || exit 94
+    test ! -e /var/run/docker.sock || exit 95
+    test ! -e /home || exit 96
+    exec /usr/local/lib/cgl-exec/opencode serve --hostname 127.0.0.1 --port 4099
+  '
