@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { ApplicationFailure } from "@temporalio/activity";
+import { authorizedOracleSuite } from "./oracle-registry.ts";
 
 export const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".local/state/constructor-temporal-poc/workspaces");
 
@@ -58,6 +59,7 @@ export function validateGenericMissionContract(input: unknown, options: Contract
   if (validation.kind !== "external-oracle") fail("validation.kind must be external-oracle");
   const oracleId = text(validation.oracleId, "validation.oracleId", 120);
   if (!/^[a-z0-9][a-z0-9-]{2,119}$/.test(oracleId)) fail("validation.oracleId must be an opaque lowercase slug");
+  try { authorizedOracleSuite(oracleId); } catch { fail("validation.oracleId is not an authorized suite"); }
   if (!Array.isArray(validation.requiredArtifacts) || validation.requiredArtifacts.length === 0) fail("validation.requiredArtifacts must be non-empty");
   const requiredArtifacts = validation.requiredArtifacts.map((item, i) => safeRelative(item, `validation.requiredArtifacts[${i}]`));
   const budget = record(raw.budget, "budget");
@@ -67,6 +69,7 @@ export function validateGenericMissionContract(input: unknown, options: Contract
   if (!Number.isInteger(maxRepairAttempts) || (maxRepairAttempts as number) < 0 || (maxRepairAttempts as number) > 3) fail("budget.maxRepairAttempts must be an integer from 0 to 3");
   if (!Number.isInteger(maxDurationMs) || (maxDurationMs as number) < 30_000 || (maxDurationMs as number) > 15 * 60_000) fail("budget.maxDurationMs must be from 30000 to 900000");
   if (maxTokens !== null && (!Number.isInteger(maxTokens) || (maxTokens as number) <= 0)) fail("budget.maxTokens must be a positive integer or null");
+  if (maxTokens !== null) fail("budget.maxTokens cannot be enforced without a reliable meter");
   if (!Array.isArray(raw.artifactPaths) || raw.artifactPaths.length === 0) fail("artifactPaths must be non-empty");
   const artifactPaths = raw.artifactPaths.map((item, i) => safeRelative(item, `artifactPaths[${i}]`));
   if (new Set(artifactPaths).size !== artifactPaths.length) fail("artifactPaths must be unique");

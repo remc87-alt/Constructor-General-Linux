@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { registerEventHandlers } from "./events.ts";
 import { latestAssistant, MissionEventEmitter, runOpenCodeEventStream } from "./event-emitter.ts";
-import { getTemporalMission, startTemporalMission, temporalBridgeFromEnv } from "./temporal-bridge.ts";
+import { decideTemporalPermission, getTemporalMission, startTemporalMission, temporalBridgeFromEnv } from "./temporal-bridge.ts";
 
 const BASE = process.env.OPENCODE_URL ?? "http://127.0.0.1:4096";
 const STATE_FILE = path.resolve(
@@ -14,7 +14,7 @@ const STATE_FILE = path.resolve(
   ".mission-map.json"
 );
 
-type MissionMap = Record<string, { session_id: string; title: string }>;
+import { abortMission, continueOnce, type MissionMap } from "./mission-ops.ts";
 
 function loadState(): MissionMap {
   try {
@@ -25,10 +25,21 @@ function loadState(): MissionMap {
 }
 
 function saveState(state: MissionMap) {
-  const tmp = STATE_FILE + ".tmp";
+  // Per-process temp name: concurrent STDIO adapters never share a temp file.
+  const tmp = `${STATE_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2), { mode: 0o600 });
   fs.renameSync(tmp, STATE_FILE);
 }
+
+// Read-modify-write of ONE mission on a fresh copy, so a concurrent adapter's
+// update to another field or mission (e.g. aborted_at) is not overwritten.
+function patchMission(missionId: string, fields: Partial<MissionMap[string]>) {
+  const fresh = loadState();
+  fresh[missionId] = { ...fresh[missionId], ...fields } as MissionMap[string];
+  saveState(fresh);
+  missions[missionId] = fresh[missionId];
+}
+const missionDeps = { get: (missionId: string) => loadState()[missionId], patch: patchMission, oc: (route: string, init?: RequestInit) => oc(route, init) };
 
 const missions = loadState();
 const temporalBridge = temporalBridgeFromEnv();
@@ -167,8 +178,7 @@ if (emitter) {
             return toolError("OpenCode created no session_id");
           }
 
-          missions[id] = { session_id: sessionID, title };
-          saveState(missions);
+          patchMission(id, { session_id: sessionID, title });
 
           await oc(`/session/${encodeURIComponent(sessionID)}/prompt_async`, {
             method: "POST",
@@ -201,37 +211,34 @@ if (emitter) {
         inputSchema: {
           mission_id: z.string().min(1),
           prompt: z.string().min(1),
+          // Optional idempotency key: the same id never sends a second prompt.
+          continuation_id: z.string().regex(/^[a-z0-9][a-z0-9-]{2,159}$/).optional(),
         },
       },
-      async ({ mission_id, prompt }) => {
+      async ({ mission_id, prompt, continuation_id }) => {
         try {
-          const mission = missions[mission_id];
-
-          if (!mission) {
-            return toolError(`unknown mission_id: ${mission_id}`);
-          }
-
-          await oc(
-            `/session/${encodeURIComponent(mission.session_id)}/prompt_async`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                model: {
-                  providerID: "freellmapi",
-                  modelID: "nemotron-3-super-120b",
-                },
-                parts: [{ type: "text", text: prompt }],
-              }),
-            }
-          );
-
-          return result({
-            mission_id,
-            session_id: mission.session_id,
-            status: "running",
-          });
+          return result(await continueOnce(missionDeps, { mission_id, prompt, continuation_id }));
         } catch (e: any) {
           console.error("continue_mission:", e?.message ?? e);
+          return toolError(e?.message ?? String(e));
+        }
+      }
+    );
+
+
+    server.registerTool(
+      "abort_mission",
+      {
+        description: "Stop the mission's current OpenCode turn and refuse further continuations (idempotent).",
+        inputSchema: {
+          mission_id: z.string().min(1),
+        },
+      },
+      async ({ mission_id }) => {
+        try {
+          return result(await abortMission(missionDeps, { mission_id }));
+        } catch (e: any) {
+          console.error("abort_mission:", e?.message ?? e);
           return toolError(e?.message ?? String(e));
         }
       }
@@ -339,7 +346,28 @@ if (emitter) {
           inputSchema: { workflow_id: z.string().regex(/^[a-z0-9][a-z0-9-]{2,119}$/), title: z.string().min(1).max(300), contract: z.unknown() }
         },
         async ({ workflow_id, title, contract }) => {
+          // One identity: the workflow id must be the contract's mission id.
+          const missionId = (contract as any)?.missionId;
+          if (missionId !== workflow_id) return toolError("workflow_id must equal contract.missionId");
           try { return result(await startTemporalMission(temporalBridge, { workflowId: workflow_id, title, contract })); }
+          catch (e: any) { return toolError(e?.message ?? String(e)); }
+        }
+      );
+      server.registerTool(
+        "decide_temporal_permission",
+        {
+          description: "Send the Director's once/reject decision for one pending permission of a Temporal mission.",
+          inputSchema: {
+            workflow_id: z.string().regex(/^[a-z0-9][a-z0-9-]{2,119}$/),
+            session_id: z.string().min(1).max(200),
+            permission_id: z.string().min(1).max(200),
+            patterns: z.unknown(),
+            decision: z.enum(["once", "reject"]),
+            by: z.string().min(1).max(120)
+          }
+        },
+        async ({ workflow_id, session_id, permission_id, patterns, decision, by }) => {
+          try { return result(await decideTemporalPermission(temporalBridge, { workflowId: workflow_id, sessionId: session_id, permissionId: permission_id, patterns, decision, by })); }
           catch (e: any) { return toolError(e?.message ?? String(e)); }
         }
       );

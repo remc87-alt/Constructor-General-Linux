@@ -148,3 +148,31 @@ reutilizarse como PASS.
 Punto de reenganche: conservar runtime y respaldo externo, verificar cero
 workflows/permisos y la versión efectiva del worker, y solo después autorizar
 una misión supervisada nueva.
+
+## Addendum GUARDA MAESTRO — 2026-10-11/12
+
+Complementa sin reemplazar. Es el punto de entrada vigente: `docs/CONTINUIDAD_2026-10-12.md`, que contiene el INICIA, la matriz de evidencia, el DO_NOT_REPEAT y el próximo gate.
+
+- **2026-10-11 · DD de aceptación** (`CGL-V2-MVP-DD-ACEPTACION-001`): **FAIL en G04**.
+  - El deadline no era efectivo: se reiniciaba entre reintentos, no había tope en el servidor, quedaban efectos posteriores al deadline y no había abort.
+  - No se ejecutó la E2E.
+- **2026-10-11 · Evolución integral** (`CGL-V2-EVOLUCION-INTEGRAL-001`).
+  - El Director fija el MVP integral P0–P7.
+  - Se corrigen en código G04, G02, G03, M3, M6 y P6, con nuevas herramientas MCP `abort_mission` y `decide_temporal_permission`, y `continuation_id`.
+  - Resultado: 63/63 en `temporal-poc` (11 pruebas de integración en un Temporal efímero), 76/76 en el adaptador y 13/13 mutaciones detectadas.
+  - **Código NO activado en runtime.**
+- **2026-10-12 · G01** (`CGL-V2-G01-PLAN-Y-GUARDA-20261012`): inventario de solo lectura y procedimiento sudo preparado, pero **no ejecutado**, en `docs/G01_AISLAMIENTO_PROCEDIMIENTO.md`.
+  - El ejecutor (`rodrigo_mella`) es administrador: grupo docker, suites, secretos heredados, Temporal sin autenticación.
+  - Quitar docker no es la solución, porque rompe FreeLLMAPI y la Fábrica PMO. La solución es un ejecutor dedicado `cgl_exec` con filtro de red.
+- **ECC realmente invocado:**
+  - `ecc:architect` y `ecc:security-reviewer` (2× cada uno);
+  - `ecc:code-reviewer`;
+  - `ecc:pr-test-analyzer`;
+  - skill `ecc:verification-loop`.
+- **Runtime al cierre:**
+  - Temporal 7243 SERVING, con 0 workflows en ejecución.
+  - Worker único (pid 2262122), con el código del 2026-10-10.
+  - OpenCode 4098 healthy, con 0 permisos y 0 sesiones activas, y cwd en el workspace `cgl-v1-csv-expense-20261009-003`.
+  - No se reinició nada.
+
+Punto de reenganche: `docs/CONTINUIDAD_2026-10-12.md` §8.

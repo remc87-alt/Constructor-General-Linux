@@ -9,6 +9,20 @@ import { EXPECTED, TRANSCRIPT, VALIDATION_VARIANTS } from "./t3-fixture.ts";
 import { type GenericMissionContract, validateGenericMissionContract, workspaceArtifactsAreFresh } from "./generic-contract.ts";
 import { parsePublicOracleResult, publicOracleResultPath, validateOracleExecutionIdentity } from "./oracle-result-contract.ts";
 import { checkpointDue, checkpointFromObservation, type MissionCheckpoint } from "./mission-checkpoint.ts";
+import { authorizedOracleSuite } from "./oracle-registry.ts";
+import { openCodePolicyViolations } from "./opencode-policy.ts";
+
+// G04: every external effect re-checks the absolute mission deadline, so a
+// Temporal retry scheduled before the deadline cannot act after it.
+export const BUDGET_EXHAUSTED = "BudgetExhausted";
+export function assertBeforeDeadline(deadlineAt: number | undefined, now = Date.now()): void {
+  if (deadlineAt === undefined) return;
+  if (!Number.isFinite(deadlineAt) || now >= deadlineAt) throw ApplicationFailure.nonRetryable("mission budget exhausted", BUDGET_EXHAUSTED);
+}
+// Monitoring ends at the earlier of this attempt's window and the absolute deadline.
+export function monitorEndsAt(t0: number, maxMs: number, deadlineAt?: number): number {
+  return Math.min(t0 + maxMs, deadlineAt ?? Number.POSITIVE_INFINITY);
+}
 
 // T3 activities. They drive the EXISTING MCP adapter (isolated instance copy,
 // own mission map) over STDIO — the same contract the Director uses — against
@@ -104,9 +118,14 @@ export async function verifyWorkspace(input: { workspace: string }) {
 // semantics cannot be weakened by generic execution.
 export async function prepareGenericMission(input: { contract: unknown }) {
   const contract = validateGenericMissionContract(input.contract);
-  if (!fs.existsSync(path.join(contract.workspace, "opencode.json"))) {
+  const configPath = path.join(contract.workspace, "opencode.json");
+  if (!fs.existsSync(configPath)) {
     throw ApplicationFailure.nonRetryable("generic contract: opencode.json missing");
   }
+  let config: unknown;
+  try { config = JSON.parse(fs.readFileSync(configPath, "utf8")); } catch { throw ApplicationFailure.nonRetryable("generic contract: opencode.json unreadable"); }
+  const violations = openCodePolicyViolations(config, contract.artifactPaths);
+  if (violations.length) throw ApplicationFailure.nonRetryable(`generic contract: permission policy rejected: ${violations.join("; ")}`);
   const stale = workspaceArtifactsAreFresh(contract);
   if (stale.length) throw ApplicationFailure.nonRetryable(`generic contract: stale artifacts: ${stale.join(",")}`);
   return contract;
@@ -182,7 +201,8 @@ async function t6WaitBarrier(missionId: string, sessionId: string, status: strin
 
 // Idempotent by mission_id: a retry after an unknown outcome finds the
 // existing mission instead of creating a second session.
-export async function startMission(input: { missionId: string; title: string; prompt: string }) {
+export async function startMission(input: { missionId: string; title: string; prompt: string; deadlineAt?: number }) {
+  assertBeforeDeadline(input.deadlineAt);
   const timer = setInterval(() => heartbeat({ phase: "start_mission", missionId: input.missionId }), 1_000);
   try {
     return await reconcileMissionStart(mcpTool, input);
@@ -192,10 +212,20 @@ export async function startMission(input: { missionId: string; title: string; pr
 }
 
 // Repairs use the exact same mission/session, never a replacement start.
-export async function continueMission(input: { missionId: string; prompt: string }) {
-  const r = await mcpTool("continue_mission", { mission_id: input.missionId, prompt: input.prompt });
+// continuationId makes a retried repair at-most-once in the adapter.
+export async function continueMission(input: { missionId: string; prompt: string; continuationId?: string; deadlineAt?: number }) {
+  assertBeforeDeadline(input.deadlineAt);
+  const r = await mcpTool("continue_mission", { mission_id: input.missionId, prompt: input.prompt, ...(input.continuationId ? { continuation_id: input.continuationId } : {}) });
   if (r.isError) throw new Error(`continue_mission failed: ${r.data?.error}`);
-  return { continued: true };
+  return { continued: true, alreadySent: r.data?.status === "already_sent" };
+}
+
+// Containment after budget exhaustion or a fatal failure: stops the OpenCode
+// turn and blocks further continuations. Deliberately not deadline-gated.
+export async function abortMission(input: { missionId: string }) {
+  const r = await mcpTool("abort_mission", { mission_id: input.missionId });
+  if (r.isError) throw new Error(`abort_mission failed: ${r.data?.error}`);
+  return { aborted: true };
 }
 
 export type MonitorResult =
@@ -231,8 +261,11 @@ export async function readMissionSnapshot(call: McpCall, missionId: string) {
 // Polls get_mission (idempotent). Heartbeats every poll; a dead worker or a
 // hung adapter is detected by the heartbeat timeout and the poll resumes.
 // idle only counts after OpenCode was seen working (G5: idle alone ≠ done).
-export async function waitMission(input: { missionId: string; expectedSessionId: string; maxMs: number; repliedPermissions: string[] }): Promise<MonitorResult> {
+export async function waitMission(input: { missionId: string; expectedSessionId: string; maxMs: number; repliedPermissions: string[]; deadlineAt?: number }): Promise<MonitorResult> {
   const t0 = Date.now();
+  // A retried attempt restarts t0, but never extends past the absolute deadline.
+  const endsAt = monitorEndsAt(t0, input.maxMs, input.deadlineAt);
+  const maxMs = Math.max(0, endsAt - t0);
   let sawWork = Boolean((Context.current().info.heartbeatDetails as any)?.sawWork);
   let checkpoint = ((Context.current().info.heartbeatDetails as any)?.checkpoint ?? null) as MissionCheckpoint | null;
   let retrySince: number | null = null;
@@ -252,13 +285,13 @@ export async function waitMission(input: { missionId: string; expectedSessionId:
     heartbeat({ status, sawWork, polls, checkpoint });
     if (due) await publishCheckpoint(next);
   };
-  while (Date.now() - t0 < input.maxMs) {
+  while (Date.now() - t0 < maxMs) {
     let g: Awaited<ReturnType<typeof readMissionSnapshot>>;
     try {
       g = await readMissionSnapshot(mcpTool, input.missionId);
     } catch (error) {
       const elapsedMs = Date.now() - t0;
-      const decision = monitorFailureDecision(error, elapsedMs, input.maxMs);
+      const decision = monitorFailureDecision(error, elapsedMs, maxMs);
       await observe("adapter_unavailable", input.expectedSessionId, false, decision !== "retry");
       heartbeat({ phase: "adapter_unavailable", polls, elapsedMs, decision, checkpoint });
       if (decision === "terminal") return { kind: "adapter_error", lastStatus: "adapter_error", polls };
@@ -292,7 +325,9 @@ export async function waitMission(input: { missionId: string; expectedSessionId:
 export const monitorMission = waitMission;
 
 // Idempotent: replying again to an already-answered permission is treated as done.
-export async function replyPermission(input: { missionId: string; permissionId: string; decision: "once" | "reject" }) {
+export async function replyPermission(input: { missionId: string; permissionId: string; decision: "once" | "reject"; deadlineAt?: number }) {
+  // A late grant is an external effect; a late reject only contains the mission.
+  if (input.decision === "once") assertBeforeDeadline(input.deadlineAt);
   try {
     const r = await mcpTool("reply_permission", { mission_id: input.missionId, permission_id: input.permissionId, decision: input.decision });
     if (r.isError && !/not ?found|404/i.test(String(r.data?.error))) throw new Error(String(r.data?.error));
@@ -368,8 +403,13 @@ export type GenericValidationEvidence =
 // The installed sudoers entries expose only these two fixed, argument-checked
 // oracle commands. The generated program runs inside the oracle's bwrap target,
 // never in this worker or under the validator's host privileges.
-export async function validateGenericMission(input: { contract: GenericMissionContract; sessionId: string; oracleExecutionId: string }): Promise<GenericValidationEvidence> {
+export async function validateGenericMission(input: { contract: GenericMissionContract; sessionId: string; oracleExecutionId: string; deadlineAt?: number }): Promise<GenericValidationEvidence> {
+  assertBeforeDeadline(input.deadlineAt);
   const identity = validateOracleExecutionIdentity({ missionId: input.contract.missionId, oracleExecutionId: input.oracleExecutionId });
+  const suite = authorizedOracleSuite(input.contract.validation.oracleId);
+  // The installed isolated wrapper currently exposes exactly this fixed profile.
+  // Refuse any registry entry that cannot be proven to map to that executor.
+  if (suite.prepareProfile !== "csv-expense-v1") return oracleFailure("ORACLE_UNAVAILABLE", "authorized oracle profile is not executable", [], undefined);
   const artifactPaths = input.contract.artifactPaths.map((artifact) => path.join(input.contract.workspace, artifact));
   const missing = input.contract.validation.requiredArtifacts.filter((artifact) => !fs.existsSync(path.join(input.contract.workspace, artifact)));
   if (missing.length) return oracleFailure("MISSING_ARTIFACT", `missing required artifacts: ${missing.join(",")}`, missing);
@@ -380,6 +420,7 @@ export async function validateGenericMission(input: { contract: GenericMissionCo
   // The installed sudoers rule deliberately permits this validator only as
   // cgl_oracle. Preparation remains root-only because it creates the sealed
   // manifest and read-only staging copy.
+  assertBeforeDeadline(input.deadlineAt);
   const validated = runOracle(ORACLE_VALIDATE, [identity.missionId, identity.oracleExecutionId], "cgl_oracle");
   const resultPath = publicOracleResultPath(identity);
   if (validated.error || ![0, 1].includes(validated.status ?? -1) || !fs.existsSync(resultPath)) {

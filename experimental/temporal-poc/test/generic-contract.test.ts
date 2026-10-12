@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { validateGenericMissionContract } from "../src/generic-contract.ts";
-import { canRepair, repairPromptFromDiagnostics, validationAccepted } from "../src/workflows.ts";
+import { acceptGenericPermission, budgetExpired, canRepair, publicDiagnosticMessage, remainingBudgetMs, repairPromptFromDiagnostics, validationAccepted } from "../src/workflows.ts";
 
 function fixture(root: string) {
   const missionId = "bench-expense-001";
@@ -56,4 +56,31 @@ test("repair diagnostics are structured and never expose hidden oracle paths", (
   assert.match(prompt, /FUNCTIONAL_FAILURE/);
   assert.doesNotMatch(prompt, /oracle|hidden/i);
   assert.match(prompt, /misma misión y sesión/);
+});
+
+test("token budgets are rejected when no reliable meter exists", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "generic-contract-"));
+  try { const value = fixture(root); assert.throws(() => validateGenericMissionContract({ ...value, budget: { ...value.budget, maxTokens: 100 } }, { workspaceRoot: root }), /cannot be enforced/); }
+  finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("generic permission decisions require exact mission/session/id/scope", () => {
+  const expected = { mission_id: "bench-expense-001", session_id: "ses-001", permission_id: "per-001", patterns: ["workspace/**"] };
+  assert.equal(acceptGenericPermission(expected, { ...expected, decision: "once", by: "director" }), true);
+  assert.equal(acceptGenericPermission(expected, { ...expected, session_id: "ses-other", decision: "once", by: "director" }), false);
+  assert.equal(acceptGenericPermission(expected, { ...expected, patterns: ["/**"], decision: "once", by: "director" }), false);
+  assert.equal(acceptGenericPermission(expected, { ...expected, decision: "reject", by: "director" }), true);
+});
+
+test("global deadline is closed at its boundary", () => {
+  assert.equal(budgetExpired(99, 100), false);
+  assert.equal(budgetExpired(100, 100), true);
+  assert.equal(remainingBudgetMs(90, 100), 10);
+  assert.equal(remainingBudgetMs(110, 100), 0);
+});
+
+test("repair diagnostics use a fixed public catalog and never forward free text", () => {
+  const prompt = repairPromptFromDiagnostics([{ code: "FUNCTIONAL_FAILURE", summary: "hidden test /password=secret token=abc" }, { code: "PRIVATE", summary: "private" }]);
+  assert.match(prompt, new RegExp(publicDiagnosticMessage("FUNCTIONAL_FAILURE")));
+  assert.doesNotMatch(prompt, /hidden test|secret|token=abc|private/);
 });

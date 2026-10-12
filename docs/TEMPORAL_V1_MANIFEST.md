@@ -139,3 +139,117 @@ respaldo externo seguro y permanecen excluidos por diseño.
 Temporal `COMPLETED` no equivale a aceptación. La versión efectiva del worker y
 la existencia actual de workflows/permisos no quedaron verificadas en este
 entorno restringido. No reiniciar ni recargar automáticamente.
+
+## Contrato MVP integral y estado — 2026-10-11 (CGL-V2-EVOLUCION-INTEGRAL-001)
+
+El Director reemplaza el alcance "una prueba CSV" por un **MVP integral**:
+
+- P0: seguridad y presupuesto.
+- P1: Temporal y recuperación durable.
+- P2: comunicación bidireccional.
+- P3: INICIA/GUARDA y memoria.
+- P4: permisos inteligentes.
+- P5: skills y modelos eficientes.
+- P6: observabilidad y costos.
+- P7: oráculo y aceptación funcional.
+
+El MVP integral no es PASS sin comunicación, memoria y reenganche probados.
+
+Escala de estado, sin implicación entre niveles: IMPLEMENTADA (código) → INTEGRADA (cableada en el
+flujo) → ACTIVADA (corriendo en runtime) → PROBADA (evidencia de prueba) → ACEPTADA (E2E
+funcional con oráculo independiente).
+
+### Cambios P0 (sin commit; respaldo `~/cgl-v2-evolucion-backup-20261011/`)
+
+| Defecto | Corrección | Estado |
+|---|---|---|
+| G04 deadline reiniciado entre reintentos | Deadline absoluto `startTime + maxDurationMs` enviado como `deadlineAt` a toda Activity; `waitMission` termina en `min(t0+maxMs, deadlineAt)` | IMPLEMENTADA · INTEGRADA · PROBADA |
+| G04 sin tope servidor | Bridge: `--execution-timeout` (presupuesto + 5 min, máx. 20) y `--id-reuse-policy RejectDuplicate` | IMPLEMENTADA · PROBADA (args) |
+| G04 efectos tras el deadline | `assertBeforeDeadline` (`BudgetExhausted`, no reintentable) antes de start, continue, reply `once` y validate (también entre prepare y validate) | IMPLEMENTADA · PROBADA |
+| G04 OpenCode sigue tras agotarse | Herramienta `abort_mission` (idempotente, bloquea continuaciones); `finish()` aborta en todo cierre no-passed, incluso ante cancelación (`nonCancellable`) y start ambiguo | IMPLEMENTADA · INTEGRADA · PROBADA |
+| G02 repair duplicable | `continue_mission` con `continuation_id` at-most-once (persistido antes del POST); clave `<mission>-repair-<n>` | IMPLEMENTADA · PROBADA |
+| G02 identidad workflow/misión | `workflow_id == contract.missionId` en el bridge y en el workflow | IMPLEMENTADA · PROBADA |
+| G02 timeout de validación | Proxy propio: 5 min, 1 intento (prepare + validate pueden sumar 260 s) | IMPLEMENTADA |
+| G02 fallos de Activity → workflow failed | Estado explícito `blocked` con `last_error` = tipo de fallo (sin texto) | IMPLEMENTADA · PROBADA |
+| G03 sin política de permisos | `opencode-policy.ts` | IMPLEMENTADA · PROBADA (validador); **semántica OpenCode NO DEMOSTRADA en runtime** |
+| M3 carrera en el mapa del adaptador | Lectura fresca, patch por misión, temporal por pid, re-chequeo de abort antes del efecto | IMPLEMENTADA · PROBADA; sin lock (ventana residual mínima) |
+| P4/M6 sin emisor de decisión | Herramienta `decide_temporal_permission` (señal exacta y atribuida); riesgo `sensitive`/`critical` en `pending_permission` | IMPLEMENTADA · PROBADA (args) |
+| P6 query ciega durante preparación | Query registrada antes de `prepareGenericMission` (`preparingState`); `deadline_at` y `next_action` | IMPLEMENTADA · PROBADA |
+| Runtime | `runtime-preflight.sh`, de solo lectura | IMPLEMENTADA · PROBADA |
+
+Detalle de la política G03 (`opencode-policy.ts`), exigida en `prepareGenericMission`:
+
+- `"*"` en ask.
+- Las herramientas de lectura en allow.
+- `bash` como `{"*":"ask"}`, sin ningún allow.
+- `edit` con `"*"` en ask; solo los artefactos de datos inertes del contrato pueden ir en allow, nunca el código.
+- `external_directory`, `webfetch`, `websearch` y `task` en deny.
+
+Evidencia:
+
+- `temporal-poc`: 63/63, incluidas 11 pruebas de integración del workflow real contra un servidor Temporal **efímero en memoria** (puerto 7263), nunca contra 7243.
+  - Cubren: repair reintentado con un único prompt, presupuesto agotado con abort, identidad, permiso exacto con señales falsificadas ignoradas, duplicado rechazado, pérdida del worker sin segunda sesión, permiso sin respuesta, reject, start ambiguo, abort fallido y cancelación.
+- Adaptador: 76/76 y `tsc` limpio.
+- Mutaciones: 13/13 detectadas.
+- Revisión ECC real: `ecc:code-reviewer` (2 HIGH y 4 MEDIUM, corregidos salvo M4/M5, aceptados por diseño), `ecc:security-reviewer` y `ecc:pr-test-analyzer`.
+
+**ACTIVACIÓN: NO.** El worker vivo (pid 2262122) y `adapter-instance` siguen con el código anterior; `runtime-preflight.sh` lo marca como FAIL. No se recargó porque P0 no cerró (ver G01).
+
+### Bloqueo crítico G01: requiere al Director con sudo
+
+El ejecutor (OpenCode 4098 y el bash del agente) corre como `rodrigo_mella`. Ese usuario:
+
+- pertenece al grupo `docker`, equivalente a root;
+- es dueño de las copias de la suite privada (la de desarrollo, ahora 0700, y la del respaldo);
+- puede leer la contraseña de 4098, presente en archivo y en el entorno;
+- puede enviar señales a Temporal 7243/7244, que no tiene autenticación.
+
+El entorno de 4098 hereda además `FREELLM_KEY`, `OPENVIKING_API_KEY` y las variables de Codex.
+
+Con `bash` en ask, el humano es la única barrera: un solo comando aprobado obtiene alcance total. La suite privada **no es inaccesible** al ejecutor, así que **P0 no cierra y no se ejecuta la E2E**.
+
+Mitigaciones que requieren sudo, por prioridad:
+1. Quitar `docker` al ejecutor.
+2. Crear un usuario ejecutor dedicado sin privilegios y dueño de nada sensible.
+3. Envolver OpenCode en bwrap con red aislada de 7243/7244.
+4. Autenticación en Temporal.
+5. Rotar la contraseña de 4098 y arrancarlo con un entorno mínimo.
+
+### Estado P0–P7
+
+| Gate | Estado |
+|---|---|
+| P0 | **BLOQUEADO** por G01 (entorno). G02/G03/G04: IMPLEMENTADAS y PROBADAS, no ACTIVADAS. |
+| P1 | PROBADA en un Temporal efímero (no duplicación, recuperación tras pérdida del worker, bloqueo por permiso); no ACTIVADA. |
+| P2 | MCP Events (`events/list/subscribe/unsubscribe`, firma, outbox durable, `mission.*` y `permission.required`): IMPLEMENTADA y PROBADA localmente (66 pruebas); no ACTIVADA en el worker (`MCP_EVENTS_EMITTER=off`); suscripción real de ChatGPT NO DEMOSTRADA. Respaldo: query durable `get_temporal_mission`. MCP Tasks no evaluado: sin compatibilidad demostrada. |
+| P3 | GitHub, INICIA/GUARDA y este manifiesto siguen siendo la fuente de verdad. `claude-mem` está activo en Claude Code y Hermes está instalado (`~/.local/bin/hermes`), pero ninguno está integrado al Constructor. Hay una clave OpenViking en el entorno, pero el servicio no está verificado. Sin integración nueva, para no duplicar memorias. |
+| P4 | Política por riesgo IMPLEMENTADA: lectura automática; edición de datos automática; código, bash y lo desconocido escalan; deny para lo externo. Nunca se autoaprueba. Automatizar bash requiere G01. |
+| P5 | Proveedor verificado en runtime: `freellmapi/nemotron-3-super-120b`, sin cambios. |
+| P6 | Query con `mission_id`, `session_id`, fase, `deadline_at`, `pending_permission` y su riesgo, reparaciones, estado funcional, `next_action`, checkpoint (heartbeat ≠ progreso) y `last_error`. Tokens: sin medición fiable. |
+| P7 | NO EJECUTADA, porque P0 sigue bloqueado. |
+
+### DO_NOT_REPEAT (añadido)
+
+- No relanzar la DD de aceptación del 2026-10-11 ni repetir la revisión de G04/G02 ya corregida.
+- No ejecutar pruebas de integración contra 7243.
+- No activar el código nuevo sin volver a correr `runtime-preflight.sh`.
+- No aprobar `bash` que ejecute código generado mientras G01 esté abierto.
+
+### Reenganche
+
+1. El Director resuelve G01 con sudo.
+2. Se ejecuta `runtime-preflight.sh` (debe dar 0 FAIL salvo "worker runs current code").
+3. Se sincroniza `adapter-instance/src` y se recarga el worker con `ctl.sh worker stop`/`start`.
+   - Rollback: restaurar los archivos desde `~/cgl-v2-dd-backup-20261011/modified.tgz` y recargar.
+4. Se reinicia 4098 con `t3-opencode.sh` sobre un workspace nuevo con `opencode.json` de `missionOpenCodeConfig`, y se verifica `GET /config` → `permission`.
+5. Recién entonces se lanza una única E2E CSV sintética.
+
+### Addendum 2026-10-12 · G01
+
+- **Due diligence y procedimiento sudo** (no ejecutado): `docs/G01_AISLAMIENTO_PROCEDIMIENTO.md`.
+- **Hallazgos que corrigen supuestos previos:**
+  - Retirar el grupo docker rompe FreeLLMAPI, la Fábrica PMO y `poc-gw`, y no aísla por sí solo.
+  - Con OpenCode bajo otro usuario, `verifyOpenCodeWorkspace` falla (EPERM sobre `/proc/<pid>/cwd`).
+  - OpenCode reporta `worktree: "/"` porque el workspace no es repo git, así que `external_directory` queda NO DEMOSTRADO.
+  - La raíz de workspaces está fija dentro de `~rodrigo_mella`, tanto en el contrato como en los wrappers del oráculo.
+- **Continuidad vigente:** `docs/CONTINUIDAD_2026-10-12.md`.
