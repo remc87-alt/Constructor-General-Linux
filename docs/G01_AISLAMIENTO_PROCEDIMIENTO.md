@@ -271,7 +271,7 @@ sudo install -o root -g cgl_exec -m 0640 <config-revisada> /var/lib/cgl-exec/ope
 
 Los hashes se verifican contra el commit de esta misión (`C`), nunca contra la copia de trabajo:
 ```bash
-C=<commit de esta misión>; R=~/constructor-general-linux-m01-lab; P=experimental/temporal-poc
+C=aafa277009405181539dc0c518024202b1f47562; R=~/constructor-general-linux-m01-lab; P=experimental/temporal-poc
 sudo install -d -o root -g root -m 0755 /usr/local/lib/cgl-exec
 sudo install -o root -g root -m 0755 ~/.opencode/bin/opencode /usr/local/lib/cgl-exec/opencode
 cmp ~/.opencode/bin/opencode /usr/local/lib/cgl-exec/opencode
