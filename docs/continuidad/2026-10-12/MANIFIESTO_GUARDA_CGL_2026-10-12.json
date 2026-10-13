@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-12",
+  "project": "Constructor-General-Linux",
+  "branch_observed": "m03-g5-consolidation-20261008",
+  "head_observed": "6afb74e08c4934d7203fa2d6dd823998b911f452",
+  "checkpoint": "/home/rodrigo_mella/constructor-general-linux-m01-lab/docs/continuidad/2026-10-12/GUARDA_MAESTRO_CGL_2026-10-12.md",
+  "status": "PARCIAL",
+  "stable_e2e": "PASS",
+  "experimental_tunnel": "PASS",
+  "temporal_tools_in_chatgpt": "NOT_DEMONSTRATED",
+  "temporal_full_e2e": "NOT_DEMONSTRATED",
+  "automatic_return": "NOT_DEMONSTRATED",
+  "next": "Expose Temporal MCP tools; then one E2E smoke",
+  "rule": "ONE_COMMAND_PER_TURN"
+}
