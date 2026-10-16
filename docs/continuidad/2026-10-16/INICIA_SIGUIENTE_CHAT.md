@@ -1,65 +1,48 @@
-# INICIA — Constructor General Linux — 2026-10-16
+# INICIA — CGL — cierre maestro 16/10/2026
 
-## Recuperación autónoma
+Proyecto exclusivo Constructor General Linux, https://github.com/remc87-alt/Constructor-General-Linux.
+Checkout `/home/rodrigo_mella/constructor-general-linux-m01-lab`; rama `m03-g5-consolidation-20261008`.
+Base previa `c1d625b18dd72c450767314695b0c786de486158`; código preparado `ff833399c9d4a80ac9f74cf9336515bfa7b4dcda`. Resolver commit documental contenedor con `git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md`; comparar SHA local/remoto antes de otro guardado. Publicación de código no es despliegue.
 
-Proyecto único: Constructor General Linux.
-Repositorio: https://github.com/remc87-alt/Constructor-General-Linux
-Checkout: /home/rodrigo_mella/constructor-general-linux-m01-lab
-Rama: m03-g5-consolidation-20261008.
+## Leer para recuperar sin la conversación
 
-Leer primero, completos:
-1. docs/continuidad/2026-10-16/GUARDA_DIAGNOSTICO_CGL_2026-10-16.md
-2. docs/continuidad/2026-10-16/MATRIZ_RECONCILIACION_CGL_2026-10-16.md
-3. Este INICIA.
+1. [GUARDA maestro](GUARDA_DIAGNOSTICO_CGL_2026-10-16.md).
+2. [Matriz reconciliada](MATRIZ_RECONCILIACION_CGL_2026-10-16.md).
+3. [Manifiesto de commits, evidencia y backups privados](MANIFIESTO_GUARDA_CGL_2026-10-16.json).
+4. [Procedimiento de rollback propuesto](rollback/ROLLBACK_PROCEDURE.md).
 
-## Historia y sincronización
+## Objetivo y estado vigente
 
-Base común f98140129675e0f0f139e82ff196d4c83aa5f081. Guardado local original 47a26b3da909f304def391919e583c40dc5781cf; antecedentes remotos e216613 y 02902a1e44536053a946bd3d0fd9dd21144d9866. La integración conserva esas líneas mediante merge; el GUARDA vigente resuelve el único conflicto documental con evidencia posterior del 16/10.
-Commit efectivo: git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md. Comparar HEAD con git ls-remote de la rama para conocer el estado real de publicación. No usar un rechazo anterior de update_file para afirmar el resultado de un intento Git posterior ni dar por publicado un commit solo local.
-Antes de otro guardado: seguir el procedimiento simplificado del GUARDA §10.1: fetch, preservar cambios, detectar/integrar divergencia antes de editar, un commit documental cuando sea posible, publicar y verificar igualdad de SHA. No reemplazar este documento por una versión histórica ni sincronizar indiscriminadamente.
+MVP real: ChatGPT Director → MCP Temporal → Worker/actividades → OpenCode → FreeLLMAPI → oráculo independiente → resultado durable/MCP Events → Director.
+**MVP PARCIAL, despliegue NO-GO, rollback PARCIAL.** El puente principal y túnel Temporal persistente están conservados.
+El primer E2E `cgl-e2e-expense-20261016-001`, run `01a14694-6989-76fd-b022-cbe1e0df549d`, terminó blocked/permission_timeout, sin oráculo final. Sesión residual contenida y permiso rechazado; no repetir intervención ni reutilizar el workspace fallido.
+Worker conocido PID 2262122, UID1000, namespace default, 127.0.0.1:7243, queue constructor-poc, sigue en versión anterior, no reiniciado. CGL_WORKSPACE_ROOT y CGL_OPENCODE_USER ausentes; raíz heredada ya confirmada. No repetir /proc ni interpretar aislamiento como ausencia.
+Código preparado preservado: parche generic-terminal-containment-v1, mapa durable compartido y productor terminal. **No desplegados**; mapa del complemento y Worker aún no unificados operativamente por la configuración propuesta. El emisor/observador nuevos no se han activado.
 
-## Estado y cinco hechos de reenganche
+## Evidencias y decisiones cerradas
 
-1. MVP funcional E2E pendiente; puente principal y pruebas históricas conservados.
-2. Constructor Linux Temporal instalado y ocho herramientas confirmadas por Director, incluidas start/get/decide Temporal. No repetir configuración ni descubrimiento.
-3. Worker heredado, preparador y validador comparten /home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces; raíces YA comprobadas.
-4. OpenCode :4098 fue identificado como rodrigo_mella UID 1000, ejecutable /home/rodrigo_mella/.opencode/bin/opencode; cwd termina en cgl-v1-csv-expense-20261009-003.
-5. La Fase A posterior al guardado recomendó workspace nuevo mediante mecanismo existente y cambio controlado de cwd de OpenCode :4098 mediante su lanzador, pendiente de autorización; no se ejecutó. El flujo genérico rechaza artefactos previos y exige coincidencia de directory/worktree. No iniciar la preparación implícitamente.
+Replay histórico 46 eventos PASS; integración aislada 11/11 PASS; unidad/adaptador 20 PASS; estado/recuperación/Events 63 PASS; productor terminal/regresiones 36 PASS; adaptador del fallback 2 PASS. Lotes solapados, no sumarlos ni repetirlos sin cambio relevante. Callback simulado no significa recepción ChatGPT.
+El candidato histórico compila pero su hash completo no coincide: no es prueba de incompatibilidad funcional ni restauración exacta. Se conserva alternativa compatible congelada; nunca falsificar un PASS. El resultado durable distingue Temporal COMPLETED de functional passed. No ampliar .py/bash automáticos; permisos humanos exactos.
 
-Las observaciones anteriores son del 16/10, no garantía de que los PIDs sigan vivos.
-Túnel Temporal: tunnel_6ad26dc258548191a71dcf157b1b8600; perfil cgl-temporal-publicacion. Servicio systemd de usuario cgl-temporal-publicacion.service habilitado y recuperado automáticamente; ya no depende de la terminal original. No detener el servicio. Ver GUARDA §12 para administración por D-Bus, registros y rollback; WSL debe permanecer en ejecución.
-No confundir indisponibilidad de herramientas/procesos en el sandbox Codex con ausencia en ChatGPT o Ubuntu anfitrión.
+## Único primer paso de mañana — Ubuntu, sin despliegue
 
-## Fallo que no debe repetirse
+```bash
+bash /home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/verify-compatible-rollback.sh
+```
 
-Workflow cgl-mvp-inspeccion-readonly-20261016, run 01a1461a-b885-7b70-a33a-55477c24d2da: FAILED en prepareGenericMission por workspace no válido (mensaje exacto en GUARDA); no ejecutó OpenCode.
-Error posterior generic-mission: causa de runtime sin cerrar. Fuente actual registra query antes del primer await; versión histórica la registraba después. No inferir versión desplegada.
-No reanudar/cancelar/repetir ese run ni intervenir la misión accidental distinta de start_mission.
+Es una prueba aislada: Temporal efímero en memoria, puerto libre distinto de 7243, actividades simuladas y cleanup de su propio proceso. Preserva copias anteriores y captura Node/deps de Ubuntu. Comprueba recuperación entre Workers con once/reject/timeout y adaptador congelado; no ejecuta modelos, oráculo real ni el Worker operativo.
+Faltó completarla en sandbox por ERR_SWC_NATIVE_CACHE, no por fallo del workflow. Registrar resultados, logs y verified-fallback.json. **No ejecutar este comando desde Codex sandbox para repetir el mismo bloqueo**. Si ya existe manifest de validación, revisar su contenido antes de reejecutar. Si el directorio privado falta, detenerse y reconstruir/revalidar; los scripts de rollback/ son archivo documental, no contienen snapshot privado.
+Si falla, diagnosticar solo ese fallo. Si pasa, devolver control al Director y evaluar gate: rollback recuperable, hashes, ausencia de ejecuciones afectadas, respaldo y actualización coherente. No reiniciar ni desplegar implícitamente.
 
-## No investigar ni modificar de nuevo
+## Después, en orden y con autorización
 
-- No repetir CGL-01/CGL-02, health básico, variables ya verificadas, registro de herramientas, SDK, tools/list auxiliar, catálogo, inferencia básica o lectura de la raíz del preparador.
-- No mezclar Empresa IA, PMO, COVAL ni otros proyectos. Los nombres técnicos históricos no cambian la identidad CGL.
-- No modificar infraestructura, túneles, complementos, Worker, Temporal, OpenCode o FreeLLMAPI; no reiniciar ni conceder permisos automáticamente.
-- No crear/modificar workspaces históricos ni borrar salidas.
-- No añadir/borrar docs/G01_BWRAP_CIERRE_2026-10-12.md o resultado.json.
-- Preservar el borrador externo ~/.local/state/cgl-temporal-publicacion/GUARDA_PENDIENTE.md sin tomar sus pendientes antiguos como estado vigente.
-- No sincronizar indiscriminadamente ni publicar secretos. Una integración de historias exige autorización y el procedimiento del GUARDA §10.1.
+Reconciliar/desplegar Worker y adaptador → activar mapa/stores/emisor/observador Temporal → suscripción real del Director en ChatGPT Work compatible (Cloud en escritorio), eventos por mission_id exacto → demostrar recepción → una sola misión E2E supervisada en workspace limpio autorizado, permisos humanos, misma sesión, proveedor, oráculo y retorno. Codex no dispone aquí de events/subscribe: ChatGPT proporciona callback/secreto sin copiado manual. No declarar MVP PASS antes del circuito integral.
 
-## Próxima misión, separada de este guardado
+## No investigar ni modificar
 
-CGL-E2E-PRIMERA-ACEPTACION.
-Primero inspección focalizada del código existente para determinar si el flujo histórico permite una sola misión controlada sin crear workspace.
-Si no, justificar workspace nuevo y mecanismo para asociarlo con OpenCode, sin implementarlo todavía.
-Entregar al Director el contrato exacto, precondiciones, permisos requeridos y evidencia esperada; solicitar autorización de ejecución correspondiente.
-Luego una sola misión Temporal, resultado recuperable y aceptación independiente. No sustituir start_temporal_mission por start_mission.
-MCP Events → ChatGPT permanece pendiente y se aborda después de la ejecución E2E.
+DO_NOT_REPEAT: publicación/herramientas, health histórico, raíces, identidad/entorno del Worker/OpenCode, contención antigua, divergencia inicial de mapas y lotes PASS anteriores. No rediseñar arquitectura.
+No tocar Empresa IA/PMO/COVAL, 4096/4097, túneles, Temporal, OpenCode, credenciales o mapas durables. No restaurar decisiones viejas sobre nuevas, borrar backups ni ejecutar E2E/modelos sin autorización. No cambiar de rama, fusionar main ni publicar privados. No tocar los dos untracked preexistentes docs/G01_BWRAP_CIERRE_2026-10-12.md y resultado.json.
 
-## Prompt breve
+## Prompt de reenganche
 
-Continúa Constructor General Linux en m03-g5-consolidation-20261008. Lee el GUARDA, matriz e INICIA vigentes del 16/10; compara Git local/remoto y conserva el historial integrado. Túnel/herramientas, raíces heredadas e identidad/cwd OpenCode ya están comprobados: no repetirlos. Ejecuta solo la inspección focalizada inicial de CGL-E2E-PRIMERA-ACEPTACION para decidir si el flujo histórico admite la prueba sin otro workspace; si no, justifica la preparación y asociación con OpenCode. No inicies misiones ni cambies servicios/workspaces sin la autorización correspondiente.
-
-## Persistencia añadida el 16/10
-
-Unidad de usuario cgl-temporal-publicacion.service: enabled, active/running; perfil y autenticación originales intactos. Sesión anterior 67226 cerrada durante traspaso autorizado. Recuperación demostrada con fallo controlado: NRestarts 0→1 y readyz 200, una instancia por perfil observada. Administración D-Bus disponible por unix:path=/run/user/1000/bus; systemctl --user falla por su socket privado desde este sandbox. No confundirlo con fallo del gestor.
-Confirmación de catálogo desde ChatGPT posterior al traspaso: pendiente hasta respuesta del Director; no repetir tools/list auxiliar ni iniciar misiones para comprobarlo. No declarar PASS global por el servicio.
+Continúa Constructor General Linux desde el GUARDA maestro del 16/10 en m03-g5-consolidation-20261008. Lee GUARDA, matriz, manifiesto e INICIA publicados. MVP PARCIAL, Worker sin actualizar, rollback PARCIAL. El siguiente paso exclusivo es revisar/ejecutar en Ubuntu verify-compatible-rollback.sh del snapshot privado, conservar resultados y verificar verified-fallback.json; si falla, diagnosticar solo ese fallo. No repetir PASS, contención ni auditorías, no desplegar, no modelos ni E2E. Después devuelve el gate al Director.

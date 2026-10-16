@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {bundleWorkflowCode} from '/home/rodrigo_mella/constructor-general-linux-m01-lab/experimental/temporal-poc/node_modules/@temporalio/worker/lib/index.js';
+const root = new URL('./', import.meta.url);
+const history = JSON.parse(execFileSync('/home/rodrigo_mella/.local/state/constructor-temporal-poc/bin/temporal', ['--address','127.0.0.1:7243','--namespace','default','workflow','show','--workflow-id','cgl-e2e-expense-20261016-001','--run-id','01a14694-6989-76fd-b022-cbe1e0df549d','-o','json'], {encoding:'utf8',maxBuffer:8*1024*1024}));
+const builds = [...new Set(history.events.map(e => e.workflowTaskStartedEventAttributes?.workerVersion?.buildId).filter(Boolean))];
+if(builds.length!==1) throw Error('Cannot establish unique historical build');
+const bundle = await bundleWorkflowCode({workflowsPath: new URL('experimental/temporal-poc/src/workflows.ts',root).pathname});
+const sha = crypto.createHash('sha256').update(bundle.code).digest('hex');
+const match = builds[0].endsWith('+'+sha);
+fs.writeFileSync(new URL('candidate-workflow-bundle.js',root),bundle.code,{flag:'wx',mode:0o600});
+const evidence={expected_build:builds[0],candidate_sha256:sha,bundle_matches:match,whole_worker_rollback_verified:false,reason:'Activities and runtime dependency provenance still require verification',node:process.version};
+fs.writeFileSync(new URL('comparison.json',root),JSON.stringify(evidence,null,2),{flag:'wx',mode:0o600});
+console.log(JSON.stringify(evidence,null,2));
+process.exitCode=match?0:1;

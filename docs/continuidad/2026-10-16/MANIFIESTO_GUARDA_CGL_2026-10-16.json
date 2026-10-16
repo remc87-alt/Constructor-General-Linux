@@ -1,0 +1,159 @@
+{
+  "mission": "CGL-GUARDA-INTEGRAL-20261016",
+  "project": "Constructor General Linux",
+  "date": "2026-10-16",
+  "recorded_at_utc": "2026-10-16T23:36:14.122524+00:00",
+  "repository": "remc87-alt/Constructor-General-Linux",
+  "branch": "m03-g5-consolidation-20261008",
+  "checkout": "/home/rodrigo_mella/constructor-general-linux-m01-lab",
+  "base_local_and_remote_before_guard": "c1d625b18dd72c450767314695b0c786de486158",
+  "functional_commit": "ff833399c9d4a80ac9f74cf9336515bfa7b4dcda",
+  "documentation_commit": "Resolve the containing checkpoint: git log -1 --format=%H -- docs/continuidad/2026-10-16/MANIFIESTO_GUARDA_CGL_2026-10-16.json",
+  "git_publication_rule": "Verify the containing documentation commit is reachable from origin/m03-g5-consolidation-20261008; final local and remote branch SHA must match. No deployment implied.",
+  "mvp_status": "PARCIAL",
+  "deployment_gate": "NO-GO",
+  "rollback_status": "PARCIAL",
+  "live_services_changed_during_guard": false,
+  "functional_files": [
+    "experimental/temporal-poc/src/mission-activities.ts",
+    "experimental/temporal-poc/src/workflows.ts",
+    "experimental/temporal-poc/test/generic-workflow.integration.test.ts",
+    "experimental/temporal-poc/test/generic-workflow.replay.test.ts",
+    "mcp-opencode-adapter/src/durable-mission-store.ts",
+    "mcp-opencode-adapter/src/event-emitter.ts",
+    "mcp-opencode-adapter/src/events.ts",
+    "mcp-opencode-adapter/src/index.ts",
+    "mcp-opencode-adapter/src/temporal-bridge.ts",
+    "mcp-opencode-adapter/src/temporal-terminal-events.ts",
+    "mcp-opencode-adapter/test/shared-missions.test.ts",
+    "mcp-opencode-adapter/test/temporal-terminal-events.test.ts"
+  ],
+  "private_artifacts": [
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/contencion-cgl-e2e-expense-20261016-001/mission-map.before.json",
+      "sha256": "6e3be1420ebec6fe610053d1f0830e8eb2337b3b27b7b6c0721aba80c21c05e7",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/gate-despliegue-20261016T222815Z/runtime-before.tar.gz",
+      "sha256": "78be1e2bb149c3675ed3245cd8b19c70833bf2de9f302619e1010f62d3b892e6",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/gate-despliegue-20261016T222815Z/proposed-source.tar.gz",
+      "sha256": "8c12adc040dfd8e018c65926c89928534fbd0a545248ad73a30648dd4c9909d8",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/gate-despliegue-20261016T222815Z/gate-result.json",
+      "sha256": "d9b9964a0a93aa3732ac65d46a3393ed8d6e3d6062659584d1c4be29ef27f521",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/gate-continuacion-20261016/evidence.json",
+      "sha256": "cf386ef5b52afe45296ad68e7adfd5674234219fa54db6b30365501b5185b410",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/gate-continuacion-20261016/terminal-source.tar.gz",
+      "sha256": "0eb24ec660f1efb271900ae042fe87cefc2edaf90f426dd751504ee2fdad5576",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-candidate-20261016/candidate.json",
+      "sha256": "f539da64fe887c712d8cafd76ed6bd6959c88ab2b023bcff01b2afb434351ae3",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-candidate-20261016/comparison.json",
+      "sha256": "3859751f9d66eaee0e5cd65ace837d617c254440e26f815b7bf324a8e641a76c",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-candidate-20261016/candidate-workflow-bundle.js",
+      "sha256": "b280a98800af4ff87f4e1b22b5cd15254e5f2450df8d6a1e63700b9ff889076d",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/provenance.json",
+      "sha256": "db0f852ec35f77296b033d67589916aefb0a73ffedf28ae814f3ca47f2884bca",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/rollback-gate-evidence.json",
+      "sha256": "4e149e0626b2ec301f771d61be2ec05c359c2b6565d15c2f4bc494d28888be70",
+      "published_content": false
+    },
+    {
+      "path": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/frozen-adapter-sandbox.log",
+      "sha256": "d89ee702854f86e4160e1ed380051ffb3b5521cab7d974ecc211045cf011c660",
+      "published_content": false
+    },
+    {
+      "path": "/tmp/cgl-temporal-integration.3eXcc7/tests.log",
+      "sha256": "498fd89606e30aa64c8c94aa99007315ad3ba546935cb7cdb4d074b85e13e6fd",
+      "published_content": false
+    }
+  ],
+  "verified_fallback_present_at_guard": false,
+  "next_command": "bash /home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/verify-compatible-rollback.sh",
+  "next_step_scope": "Isolated rollback validation in Ubuntu only; no operative Worker restart, no E2E",
+  "tests": [
+    {
+      "batch": "historical replay",
+      "result": "PASS",
+      "events": 46,
+      "source": "Director confirmed Ubuntu execution; not repeated"
+    },
+    {
+      "batch": "isolated Temporal integration",
+      "pass": 11,
+      "fail": 0,
+      "skipped": 0,
+      "duration_ms": 41170.883572,
+      "source": "/tmp/cgl-temporal-integration.3eXcc7/tests.log"
+    },
+    {
+      "batch": "prior units and adapter",
+      "pass": 20,
+      "source": "Codex results accepted by Director"
+    },
+    {
+      "batch": "shared state, recovery, Events/outbox",
+      "pass": 63,
+      "source": "10 adapter/state + 11 recovery + 42 Events; local simulations"
+    },
+    {
+      "batch": "terminal producer + affected regressions",
+      "pass": 36,
+      "fail": 0,
+      "skipped": 0,
+      "source": "3 new terminal tests + 33 affected regressions; simulated callback"
+    },
+    {
+      "batch": "frozen fallback adapter",
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0,
+      "source": "/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/frozen-adapter-sandbox.log"
+    },
+    {
+      "batch": "cross-version fallback",
+      "result": "BLOCKED_ENVIRONMENT",
+      "reason": "ERR_SWC_NATIVE_CACHE at preflight, before ephemeral server startup"
+    }
+  ],
+  "test_count_caveat": "Batches overlap; never sum them as independent tests or E2E acceptance.",
+  "continuity_files": [
+    "GUARDA_DIAGNOSTICO_CGL_2026-10-16.md",
+    "MATRIZ_RECONCILIACION_CGL_2026-10-16.md",
+    "INICIA_SIGUIENTE_CHAT.md",
+    "MANIFIESTO_GUARDA_CGL_2026-10-16.json"
+  ],
+  "public_rollback_sources": {
+    "rollback/verify-bundle.mjs": "76c60af104f03c0e5c6dc8d43fe78a23bab3c0235398283e6efdc7e5ae1aba5d",
+    "rollback/cross-version.test.mjs": "fdd67c52df5102b0f590f7fdf372c18c6d5324cbaf2d65fa8710dc9d1a4afa23",
+    "rollback/ROLLBACK_PROCEDURE.md": "0ab855b5a98d42b8bff94dc23d4cbf8fb6b8242e35b5fa0e3bbeea5a6bff3b2a",
+    "rollback/verify-compatible-rollback.sh": "a84f0eabaf074199f40c05d56bf4198cb6f033c194ca5840a7708ec1305d8a87"
+  }
+}

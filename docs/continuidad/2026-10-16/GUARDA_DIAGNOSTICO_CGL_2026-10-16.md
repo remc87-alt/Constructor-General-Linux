@@ -1,238 +1,148 @@
-# GUARDA RECONCILIADO — Constructor General Linux — 2026-10-16
+# GUARDA MAESTRO — Constructor General Linux — 16/10/2026
 
-Estado del MVP: **PARCIAL; aceptación funcional E2E pendiente**.
-Este documento sustituye como punto de continuidad las instrucciones operativas anteriores del 16/10, conservadas en Git. No certifica salud futura ni autoriza ejecutar la próxima misión.
+MISIÓN: CGL-GUARDA-INTEGRAL-20261016. Estado MVP: **PARCIAL**. Gate de despliegue: **NO-GO**. Rollback: **PARCIAL**.
+Este es el estado vigente al cierre. Sustituye instrucciones operativas anteriores, conservadas íntegramente en Git, no las evidencias históricas. Publicar código no significa desplegarlo.
 
-## 1. Identidad y alcance
+## 1. Identidad, Git y fuentes
 
-- Proyecto exclusivo: Constructor General Linux (CGL).
-- Repositorio: https://github.com/remc87-alt/Constructor-General-Linux
-- Checkout: /home/rodrigo_mella/constructor-general-linux-m01-lab
-- Rama: m03-g5-consolidation-20261008.
-- Identidad acreditada en PROJECT.md y README.md; separación expresa en PROJECT.md §Separación.
-- Empresa IA es independiente. No incorporar arquitectura, herramientas, configuración ni decisiones de ese proyecto, de PMO, COVAL u otros.
-- El identificador técnico histórico empresa-ia-opencode-adapter y la etiqueta del puente principal que contiene «Empresa-IA» aparecen en documentos CGL: son nombres técnicos, no evidencia de identidad del otro proyecto.
-- FreeLLMAPI es una dependencia utilizada por CGL; no se atribuye a CGL propiedad exclusiva de su infraestructura.
+Proyecto exclusivo Constructor General Linux (CGL), repositorio https://github.com/remc87-alt/Constructor-General-Linux, rama `m03-g5-consolidation-20261008`, checkout `/home/rodrigo_mella/constructor-general-linux-m01-lab`.
+Empresa IA, PMO y COVAL son proyectos independientes. Una denominación técnica histórica del puente que contenga Empresa-IA no acredita pertenencia a otro proyecto ni autoriza tocarlo.
 
-## 2. Precedencia y fuentes
+- HEAD local/remoto comprobados al iniciar este guardado: `c1d625b18dd72c450767314695b0c786de486158`. Fetch: cero commits divergentes.
+- Código preparado preservado en `ff833399c9d4a80ac9f74cf9336515bfa7b4dcda`. **Worker operativo todavía no actualizado**.
+- El commit documental es el que contiene este GUARDA y el manifiesto; resolver con `git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md`. Verificar SHA de rama local/remota, sin inferir publicación a partir de un commit local.
+- Antecedentes Git conservados: f981401, 47a26b3, e216613, 02902a1 y merge 8ef1a01. La conciliación anterior está cerrada; no fusionar de nuevo ni resetear.
+- Fuentes de esta consolidación: evidencia Ubuntu aportada por Director, resultados Codex anteriores, código preparado, manifiestos y logs locales; Git comprobado durante el GUARDA. No se ejecutaron pruebas funcionales ni inspecciones nuevas de servicios para guardar.
+- Histórico documental anterior: [GUARDA en c1d625b](https://github.com/remc87-alt/Constructor-General-Linux/blob/c1d625b18dd72c450767314695b0c786de486158/docs/continuidad/2026-10-16/GUARDA_DIAGNOSTICO_CGL_2026-10-16.md). No tomar sus próximos pasos superados como actuales.
 
-1. Evidencia de Ubuntu del 16/10 aportada literalmente por Director/usuario en MISIÓN CGL-GUARDA-RECONCILIADO-20261016.
-2. Código/archivos efectivos del checkout.
-3. Git local/remoto comprobado durante este guardado.
-4. INICIA/GUARDA canónicos.
-5. Informes históricos fechados.
-6. Hipótesis explícitas.
+## 2. Resumen ejecutivo y arquitectura real
 
-La evidencia Ubuntu reproducida aquí procede del usuario, no de una nueva ejecución por Codex. La matriz detallada está en MATRIZ_RECONCILIACION_CGL_2026-10-16.md.
-Referencia histórica remota: commit 02902a1e44536053a946bd3d0fd9dd21144d9866, este mismo path antes de la consolidación. No reproducir sus pendientes superados como estado vigente.
-Referencias complementarias: JORNADA_2026-10-06_CHECKPOINT_DIRECTOR_CONSTRUCTOR.md, JORNADA_2026-10-08_GUARDA_CANONICO.md, docs/TEMPORAL_V1_MANIFEST.md y docs/CONTINUIDAD_2026-10-12.md. Sus restricciones y resultados tienen fecha y no prevalecen sobre verificaciones posteriores.
+La primera misión E2E real recorrió Temporal, validó contrato/workspace e inició OpenCode, pero terminó bloqueada esperando permiso. No produjo aceptación funcional ni ejecución final del oráculo. Se contuvo la sesión y se rechazó el permiso residual. Se prepararon compatibilidad de replay, estado compartido y productor terminal; las pruebas aprobadas no equivalen a despliegue ni a recepción por ChatGPT.
 
-## 3. Arquitectura real acreditada
+Ruta objetivo: ChatGPT Director → túnel MCP Temporal → adaptador MCP → Temporal Server/Worker → actividades → adaptador STDIO → OpenCode :4098 → FreeLLMAPI → oráculo independiente → resultado durable → MCP Events → Director.
+El workflow genérico utiliza actividades y adaptador sobre API OpenCode. No hay evidencia de que invoque directamente `bin/mission-runner.sh` ni `bin/mission_runner_structured.py`; son rutas existentes distintas, no reconstruirlas para este MVP.
 
-ChatGPT Director → Secure MCP Tunnel → adaptador MCP → CLI Temporal → Temporal Server → Worker → actividades → adaptador auxiliar STDIO → API OpenCode → FreeLLMAPI → texto/artefactos → oráculo independiente → estado durable → get_temporal_mission.
+### Matriz de componentes
 
-Fuentes:
-- mcp-opencode-adapter/src/index.ts: herramientas y sesiones/prompt_async.
-- mcp-opencode-adapter/src/temporal-bridge.ts: startTemporalMission, getTemporalMission, decideTemporalPermission; inicio de genericConstructorMissionWorkflow.
-- experimental/temporal-poc/src/worker.ts: imports activities.ts, mission-activities.ts, bridge-activities.ts; Worker.create carga workflows.ts y registra actividades, namespace default, task queue por entorno.
-- experimental/temporal-poc/src/workflows.ts: genericConstructorMissionWorkflow y query generic-mission.
-- experimental/temporal-poc/src/mission-activities.ts: preparación, identidad OpenCode, inicio/reconciliación, espera, permisos, reparación, abort y oráculo.
-- bin/mission-runner.sh y bin/mission_runner_structured.py invocan opencode run por una ruta independiente. No se ha identificado que el workflow genérico llame a esos runners.
-- opencode.json documenta el proveedor FreeLLMAPI; no se copian secretos ni configuración global.
+| Enlace/componente | Estado | Evidencia y límite |
+|---|---|---|
+| Puente principal y OpenCode 4096/4097 | PASS histórico | Conservado; no intervenido por estas correcciones |
+| Túnel/complemento Constructor Linux Temporal | PASS histórico observado | ID `tunnel_6ad26dc258548191a71dcf157b1b8600`, perfil `cgl-temporal-publicacion`; ocho herramientas publicadas; no repetir descubrimiento |
+| Persistencia del túnel | PASS histórico observado | systemd de usuario `cgl-temporal-publicacion.service`, habilitado; independencia de terminal y recuperación probadas. WSL debe estar ejecutándose |
+| Temporal operativo | PASS histórico observado | namespace default, 127.0.0.1:7243, queue constructor-poc; PID Worker 2262122 identificado por Ubuntu, no reiniciado. No garantiza salud futura |
+| Contrato/workspace y arranque OpenCode del E2E | PASS de esas etapas | Historial del run real; no significa éxito funcional |
+| FreeLLMAPI | PARCIAL en este E2E | Proveedor/modelo identificados en sesión OpenCode; sin prueba independiente nueva del HTTP del proveedor ni resultado aceptado. PASS históricos se conservan |
+| Oráculo independiente | NO DEMOSTRADO en este E2E | No se ejecutó tras el permiso; configuración/raíces identificadas, no invocar para el GUARDA |
+| Parche de cierre/replay | PASS local/Ubuntu | Historial 46 eventos y 11 pruebas aisladas aprobados; no desplegado |
+| Mapa compartido/recuperación/permisos | PASS local; PARCIAL operativo | Código y pruebas preparados; lanzador persistente sin activar la referencia compartida |
+| Eventos terminales | PASS local; PARCIAL operativo | Productor probado, lectura real generó mission.blocked; ningún webhook enviado por esa lectura |
+| MCP Events → ChatGPT | NO DEMOSTRADO | Falta suscripción activa y recepción efectiva del Director |
+| Rollback | PARCIAL | Reconstrucción exacta no acreditada; fallback compatible congelado pendiente de traspaso aislado |
+| MVP integral | PARCIAL / NO-GO | No hubo E2E funcional aceptado ni retorno automático demostrado |
 
-MCP Events existe en el adaptador, pero el retorno automático aceptado a ChatGPT sigue pendiente. El workflow genérico inspeccionado no llama bridgeEmit. El receptor T4 fue interno con envío sustituido: no acredita webhook real ni reactivación de ChatGPT.
+## 3. Primera ejecución real, fallos y contención
 
-## 4. Estado de componentes al cierre documental
+- Mission/workflow: `cgl-e2e-expense-20261016-001`.
+- Run: `01a14694-6989-76fd-b022-cbe1e0df549d`.
+- Sesión: `ses_eb96b9366ffesoW1f3ujomVt5V`.
+- Permiso: `per_1469653bf001sJeiPx47tpLr7H`, edición de `expense_cli.py`.
+- Workspace fallido: `/home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces/cgl-e2e-expense-20261016-001`.
+- Contrato: maxDurationMs=240000, maxRepairAttempts=0. No publicar instrucciones privadas ni estados completos.
+- UTC: 21:18:14 preparación/arranque; 21:20:21 permiso; 21:22:14 cierre `blocked / permission_timeout`. Temporal COMPLETED no equivale a passed.
+- 46 eventos: prepareGenericMission, verifyOpenCodeWorkspace, startMission y waitMission. Eventos 41/42 temporizador; 43–45 última Workflow Task; 46 cierre. No abortMission ni validación de oráculo en ese historial.
+- El get_mission directo devolvió unknown mission_id: Worker y complemento consultaban mapas distintos.
+- Contención posterior por mecanismo existente: aborted_at=2026-10-16T21:38:18.130Z; rechazo exclusivo del permiso residual. Después, cero sesiones activas, permisos y preguntas. Es observación fechada; no repetir contención ni conceder once a ese run cerrado.
+- El workspace histórico cgl-v1-csv-expense-20261009-003 permanece intacto. El workspace del E2E fallido está contaminado: **no reutilizar ni borrar artefactos**.
+- Misión accidental anterior `mission-1792179758169-nsr3k4`, sesión `ses_eb9c31b7affea25BdS25Eavq8Y`: aborto y rechazo residual ya cerrados; no intervenirla de nuevo.
+- Run previo de contrato inválido cgl-mvp-inspeccion-readonly-20261016 / 01a1461a-b885-7b70-a33a-55477c24d2da: FAILED en prepareGenericMission por workspace vacío; no OpenCode. No repetir ese diagnóstico ni convertirlo en E2E PASS.
 
-| Capacidad | Estado y límite |
+## 4. Código preservado, sin despliegue
+
+Commit funcional `ff833399c9d4a80ac9f74cf9336515bfa7b4dcda`; inventario completo en el manifiesto.
+
+| Archivos | Cambio preparado |
 |---|---|
-| Puente principal, misma sesión, consulta y continuación | PASS histórico; conservar, no repetir pruebas básicas |
-| Túnel y complemento Constructor Linux Temporal | Publicación previa confirmada por Director; runtime transferido a systemd de usuario y recuperación demostrada (§12). Catálogo posterior al traspaso pendiente de confirmación desde ChatGPT. |
-| Catálogo auxiliar CGL-02 | PASS local initialize/tools/list; prueba cerrada, distinta de aceptación funcional |
-| Temporal Server/Worker | Activos observados en Ubuntu el 16/10; no reconsultados durante este GUARDA |
-| Worker → OpenCode → proveedor | Ejecuciones históricas; circuito actual integral aún sin aceptación |
-| Oráculo: raíces | Preparador y validador instalados confirmados sobre raíz heredada |
-| Identidad/cwd OpenCode | Comprobados en Ubuntu; directorio histórico identificado, no intercambiable automáticamente con otro |
-| Preparación de misión genérica nueva | Código existente; workspace histórico no acreditado como limpio/compatible |
-| Consulta generic-mission del run fallido | Error reportado; causa concreta del handler pendiente de correlación de build |
-| MCP Events y aceptación E2E | Pendientes; no declarar MVP PASS |
+| experimental/temporal-poc/src/workflows.ts | patched("generic-terminal-containment-v1"): replay anterior sin insertar aborto; ejecuciones nuevas mantienen aborto obligatorio en cierre no satisfactorio y limpieza del estado de permiso |
+| experimental/temporal-poc/src/mission-activities.ts | Adaptador del checkout versionado; mapa y stores Temporal existentes explícitos; hijos transitorios con emisor off |
+| mcp-opencode-adapter/src/durable-mission-store.ts e index.ts | Lecturas frescas, flock entre procesos, escritura atómica, sesión inmutable; exclusión por misión y validación de permiso/sesión; mapa explícito por MCP_MISSION_MAP_FILE |
+| mcp-opencode-adapter/src/temporal-terminal-events.ts y temporal-bridge.ts | Describe y resultado durable del run exacto; clasificación funcional, rechazo de falsos passed; lecturas acotadas; correlación workflow/run/sesión |
+| mcp-opencode-adapter/src/event-emitter.ts, events.ts e index.ts | Reutiliza outbox, firmas y suscripciones; observación terminal opt-in, clave temporal-terminal:<run_id>; catálogo diferencia final técnico y funcional |
+| Pruebas generic-workflow.integration, generic-workflow.replay, shared-missions y temporal-terminal-events | Cobertura focalizada; replay histórico opt-in; pruebas con actividades/callback simulados |
 
-## 5. Evidencia Ubuntu del 16/10 — NO REPETIR
+No se ampliaron permisos automáticos para .py ni bash. El contrato funcional no cambió.
+El adaptador persistente Temporal necesita, en una futura intervención autorizada, MCP_MISSION_MAP_FILE apuntando al mapa heredado, stores explícitos, MCP_EVENTS_EMITTER=on y MCP_TEMPORAL_RESULTS=on. Propuestas privadas preparadas, no instaladas. No activar solo una mitad y declararla despliegue coherente.
 
-### Temporal y Worker
+## 5. Matriz de pruebas y evidencia
 
-- Temporal Server PID 245093, 127.0.0.1:7243.
-- Worker PID 2262122; launcher 2262108; usuario rodrigo_mella.
-- Entrada: experimental/temporal-poc/src/worker.ts.
-- Entorno inicial del Worker: CGL_WORKSPACE_ROOT y CGL_OPENCODE_USER ausentes.
-- workspaceRoot() selecciona por defecto:
-  /home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces
-- expectedExecutor() selecciona UID/HOME del Worker y ejecutable heredado.
-- La invisibilidad de esos PIDs desde el sandbox NO demuestra ausencia en el anfitrión.
-- Los PIDs son evidencia fechada, no identificadores fiables para intervenciones futuras.
+| Lote | Resultado | Fuente y alcance |
+|---|---|---|
+| Replay histórico de 46 eventos | PASS | Confirmación Ubuntu del Director; no repetido durante GUARDA |
+| Integración Temporal aislada | 11 PASS, 0 FAIL, 0 SKIPPED; 41,17 s | /tmp/cgl-temporal-integration.3eXcc7/tests.log, SHA en manifiesto; actividades simuladas |
+| Unidad/adaptador anteriores | 20 PASS | Resultados Codex aceptados por Director |
+| Estado compartido, recuperación, Events/outbox | 63 PASS | 10 adaptador/estado + 11 recuperación + 42 Events; simulaciones, no modelos |
+| Productor terminal/regresiones afectadas | 36 PASS, 0 FAIL, 0 SKIPPED | 3 nuevas terminales + 33 regresiones; callback simulado, sin recepción ChatGPT |
+| Adaptador del fallback congelado | 2 PASS | frozen-adapter-sandbox.log; paquete congelado, no runtime operativo |
+| Traspaso entre versiones once/reject/timeout | BLOQUEADO por entorno | ERR_SWC_NATIVE_CACHE en preflight; no se inició Temporal efímero ni se probó el traspaso |
+| Recepción real del Director | NO DEMOSTRADO | No hay evidencia de suscripción/recepción efectiva |
 
-### Oráculo — duda de raíz cerrada
+Los lotes se solapan: **no sumar como pruebas independientes ni aceptación E2E**. No repetirlos por cambio de chat. Un error nativo del sandbox no es FAIL del workflow. /tmp puede desaparecer: resumen y hashes quedan publicados; artefactos privados siguen siendo necesarios para comprobar los originales.
 
-Lectura administrativa realizada por el usuario sobre /usr/local/libexec/cgl-oracle-prepare:
-`6:ROOT = Path("/home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces").resolve()`
+## 6. Desfase y rollback: hechos, límites y alternativa
 
-El validador /usr/local/libexec/cgl-oracle-validate declara la misma raíz heredada.
-**Compatibilidad de raíces Worker/preparador/validador confirmada para la configuración observada.**
-No solicitar otra lectura del preparador. /srv/cgl/workspaces es una alternativa del código de aislamiento, no la raíz efectiva de esta ejecución heredada.
+Worker observado en Ubuntu: UID 1000 rodrigo_mella, PID 2262122, launcher 2262108, Node+tsx, CWD del módulo Temporal del checkout. POC_TEMPORAL_ADDRESS=127.0.0.1:7243; POC_TASK_QUEUE=constructor-poc; POC_EFFECTS_DIR=~/.local/state/constructor-temporal-poc/effects. CGL_WORKSPACE_ROOT, CGL_OPENCODE_USER y MCP_MISSION_MAP_FILE ausentes. No fue reiniciado ni sustituido.
+Worker, preparador y validador usan raíz heredada `/home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces`; identidad OpenCode UID 1000 y ejecutable heredado ya identificados. Son comprobaciones cerradas.
 
-### OpenCode — identidad y directorio identificados
+El runtime no programó el aborto final que sí contiene el código preparado. Replay sin parche falló al consumir evento 46 porque esperaba una actividad nueva; parche aprobado resolvió ese replay en Ubuntu.
 
-Observación del usuario mediante ss y comprobaciones de proceso:
-- Listener 127.0.0.1:4098, PID 1428947.
-- Usuario rodrigo_mella, UID 1000.
-- Ejecutable /home/rodrigo_mella/.opencode/bin/opencode.
-- Comando: opencode serve --hostname 127.0.0.1 --port 4098.
-- Cwd:
-  /home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces/cgl-v1-csv-expense-20261009-003
+Build registrado: `@temporalio/worker@1.24.0+c0779ef292b472b96da111afa922cfda29b7c5f396cf4a8d6b60094ae5a2cbba`.
+Candidato histórico: base f9e979c8217f56956ee0a4bca6572106823d70e1 + backups DD del 11/10, checksums originales verificados. Compilación Ubuntu PASS, Node v22.23.2 y SDK 1.24.0. SHA completo candidato: `b280a98800af4ff87f4e1b22b5cd15254e5f2450df8d6a1e63700b9ff889076d`; bundle_matches=false.
+El SDK local genera su Build ID por SHA256(bundle.code) si no se fija ID explícito: no se compararon magnitudes distintas en ese modo. El hash incluye sourcemaps con rutas absolutas; no acredita incompatibilidad funcional. No se recuperaron los bytes del bundle anterior, ni procedencia completa de actividades/dependencias cargadas. No forzar PASS del verificador ni atribuir un commit exacto al Worker en memoria.
 
-No volver a declarar su identidad/cwd «sin comprobar». Esto no certifica GET /path/worktree ni compatibilidad con un workspace nuevo.
+Fallback alternativo: `/home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016`. Es núcleo endurecido compatible propuesto, **no réplica del Worker anterior**. Contiene snapshot de código/deps, procedimiento y prueba nueva de traspaso real de Workers de prueba con actividades simuladas. El workflow congelado tiene los mismos bytes que el código aprobado actual; el paquete usa mapa durable vigente, no restaura mapas antiguos.
+Los verificadores fuente y procedimiento se conservan en [rollback/](rollback/ROLLBACK_PROCEDURE.md), sin snapshots ni estado privado. Son copia documental: **no ejecutar desde docs**; el comando próximo usa el directorio privado preparado. Si falta ese directorio, detenerse y reconstruir/revalidar desde las referencias documentadas, nunca inventar un verified-fallback.json.
 
-### Workspace histórico — preservar
+## 7. MCP Events: implementación y aceptación pendiente
 
-El listado aportado contiene opencode.json, expense_cli.py, test_expense_cli.py, sample.csv, README.md y CSV de pruebas anteriores; no mostró .git.
-No está acreditado como workspace limpio de una misión genérica nueva.
-No se ha demostrado que crear otro workspace sea indispensable para cualquier variante E2E.
-Durante este GUARDA: no crear otro, no modificar el histórico, no borrar artefactos ni reiniciar OpenCode para cambiar cwd.
+- permission.required existe a partir de permisos reales OpenCode. No implica autorización.
+- Productor terminal nuevo consume describe/result de Temporal fijando run_id; no añade comandos al workflow ni altera replay.
+- mission.completed exige functional_status=passed y evidencia de oráculo satisfactoria; mission.failed/blocked conservan correlación. Un cierre blocked no se convierte en solicitud viva de permiso.
+- El outbox persiste antes del envío, utiliza eventId estable, firmas, expiración, deduplicación y evidencia de errores/reintentos. Pruebas con recepción sustituida no prueban entrega externa.
+- Ruta soportada: [OpenAI MCP Events](https://developers.openai.com/plugins/build/mcp-events), ChatGPT Work compatible; escritorio con Cloud. ChatGPT debe crear events/subscribe con callback y secreto. Codex no tiene esa operación expuesta aquí. No pedir/copiar secretos manualmente.
+- Director: suscribir los cuatro eventos por mission_id exacto de la próxima misión autorizada, antes de ejecutarla; comprobar persistencia/challenge y luego recepción real. No generar eventos falsos ni reusar la misión fallida para fabricar aceptación. La observación interna cada 10 s no es entrega por polling a ChatGPT: el retorno sigue siendo webhook HTTPS.
 
-## 6. Túnel y herramientas publicados
+## 8. P0 y próximos objetivos — orden estricto
 
-- Túnel independiente: tunnel_6ad26dc258548191a71dcf157b1b8600.
-- Perfil: cgl-temporal-publicacion.
-- Complemento: Constructor Linux Temporal.
-- Ocho herramientas confirmadas por Director/usuario:
-  abort_mission, continue_mission, decide_temporal_permission, get_mission,
-  get_temporal_mission, reply_permission, start_mission, start_temporal_mission.
-- Puente principal conservado.
-- Perfil local nuevo creado anteriormente con referencia segura, sin copiar la clave; doctor y sondeo fueron observados.
-- El arranque original dependía de terminal. Esa dependencia fue resuelta mediante el servicio de usuario del §12; no detener el servicio fuera de una intervención autorizada. WSL debe permanecer ejecutándose.
-- No crear otro túnel/complemento ni repetir publicación, health o tools/list auxiliar.
-- Que el sandbox no exponga las herramientas Temporal a Codex no contradice su disponibilidad confirmada en ChatGPT Director.
+1. **Ahora: rollback PARCIAL.** En Ubuntu ejecutar únicamente:
 
-## 7. Run fallido y causa conocida
+```bash
+bash /home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/verify-compatible-rollback.sh
+```
 
-- Workflow: cgl-mvp-inspeccion-readonly-20261016.
-- Run: 01a1461a-b885-7b70-a33a-55477c24d2da.
-- Tipo: genericConstructorMissionWorkflow; task queue constructor-poc.
-- Historial consultado anteriormente por Codex con workflow-id y run-id explícitos, namespace default, address 127.0.0.1:7243.
-- 11 eventos; inicio 2026-10-16T19:05:18.725750708Z; cierre 19:05:19.373643092Z.
-- Eventos 3/4 y 9/10: Workflow Tasks atendidas/completadas por 2262122@WIN-81CO28VJDO7.
-- Eventos 5/6/7: prepareGenericMission programada, iniciada y fallida.
-- Error: generic contract: workspace must be a non-empty string up to 1000 chars.
-- Fallo no reintentable; evento 11 cierra FAILED. No llegó a iniciar OpenCode.
-- SDK temporal-typescript 1.24.0.
-- Build registrado: @temporalio/worker@1.24.0+c0779ef292b472b96da111afa922cfda29b7c5f396cf4a8d6b60094ae5a2cbba.
-- Referencia verificable: identidad exacta y eventos anteriores del historial Temporal. El volcado no se guardó como archivo; estos datos proceden del informe previo de lectura de Codex, no de una nueva consulta durante este GUARDA.
+Recaptura Node/dependencias en un área privada, conserva copias anteriores, verifica precondiciones, usa Temporal en memoria/puerto libre distinto de 7243 y limpia solo el servidor de prueba. Prueba tres traspasos (once/reject/timeout) y el adaptador congelado. No toca Worker operativo. Registrar logs y verificar `verified-fallback.json`; su mera existencia no sustituye revisión de resultados/hashes. Si falla, diagnosticar solo ese fallo.
+2. Si pasa: revisar gate de despliegue, integridad/compatibilidad del fallback, ausencia de workflows afectados, configuración, respaldo y rollback ejecutable. Devolver control al Director para autorización; no desplegar implícitamente.
+3. Reconciliar y actualizar controladamente Worker y adaptador Temporal, preservando mapa/stores y una sola instancia. No tocar canal principal.
+4. Activar emisor/observador terminal persistentes en ruta Temporal, establecer suscripción real del Director y demostrar recepción; no declarar PASS solo por generación o challenge.
+5. Con autorización explícita, una sola misión E2E real supervisada, en workspace limpio autorizado distinto del fallido: permisos humanos exactos, misma sesión, proveedor, oráculo, resultado recuperable y retorno automático.
+6. Aceptación MVP únicamente cuando todos los enlaces estén demostrados. No anticipar PASS por un workflow creado ni por Temporal COMPLETED.
 
-No es PASS E2E. No reanudar, repetir o cancelar el run.
-El error posterior «Workflow did not register a handler for generic-mission» no está explicado definitivamente: el código actual registra el handler antes de preparar; la versión histórica f9e979c lo hacía después. Esa hipótesis requiere correlación del build. La consulta del bridge no fija run-id; no se acreditó el destino exacto de la consulta original.
-La misión accidental iniciada mediante start_mission es distinta: ID/estado no confirmados; no intervenirla ni confundirla con este run.
+## 9. Recuperación segura y restricciones
 
-## 8. Contrato y preparación existentes
+Procedimiento detallado: [ROLLBACK_PROCEDURE.md](rollback/ROLLBACK_PROCEDURE.md). El fallback operativo requiere autorización posterior, hashes correctos, identificación actual del Worker actualizado, término controlado y confirmado antes de arrancar otra instancia, configuración heredada y verificación de poller/estado. No SIGKILL automático ni pidfiles retirados mientras el proceso siga vivo. El ctl.sh canónico espera su ruta: no aplicarlo ciegamente al fallback.
+No restaurar desde backup Temporal SQLite, historiales, mapas, efectos, decisiones humanas, sesiones, suscripciones/outbox o workspaces. Respaldos de estado sirven como evidencia; no sobrescribir decisiones posteriores. Mantener referencias de autenticación sin publicar ni modificar secretos.
+No tocar Empresa IA, otros proyectos, 4096/4097, túneles, Temporal u OpenCode. No crear infraestructura ni otro Worker/túnel/complemento. No modelos, misiones ni permisos automáticos durante recuperación documental. El sandbox sin /proc del anfitrión no acredita ausencia del Worker; D-Bus de usuario disponible para el túnel no equivale a shell libre del host.
 
-start_temporal_mission exige workflow_id, title y contract. workflow_id debe igualar contract.missionId.
-Contrato: missionId, workspace absoluto existente, instructions, validation, budget y artifactPaths.
-validation.kind = external-oracle; oracleId = expense-oracle-001, perfil csv-expense-v1.
-Artefactos del ejemplo: expense_cli.py y test_expense_cli.py; expense_cli.py requerido por el oráculo.
-budget.maxTokens debe ser null: no hay medidor fiable; no inventar límites de tokens.
-prepareGenericMission valida opencode.json, propiedad/configuración, git válido, política de permisos y ausencia de artefactos declarados preexistentes.
-verifyOpenCodeWorkspace valida identidad y directorio/worktree efectivos del servidor.
-createMissionWorkspace y workspace-setup.ts existen para preparación exclusiva de un nuevo directorio, política y git, pero NO se ejecutan durante este GUARDA.
-Crear un directorio no cambia el cwd del OpenCode activo.
-Las pruebas de generic-workflow.integration.test.ts usan workflow real y actividades simuladas en Temporal efímero; no acreditan ejecución actual de OpenCode/oráculo/modelo.
+## 10. DO_NOT_REPEAT y contradicciones resueltas
 
-## 9. Decisiones, restricciones y riesgos
+No repetir sin regresión demostrada: CGL-01/02 y publicación de herramientas; salud básica del túnel/Temporal; roots heredados; identidad/entorno del Worker y OpenCode; contención antigua; investigación inicial de mapas; replay 46 eventos; 11 integración; 20 unidad; 63 estado/Events; 36 productor. No volver a ejecutar verify-bundle.mjs para perseguir igualdad sin nueva evidencia de reconstrucción.
+Quedaron superados los pendientes del GUARDA anterior sobre crear el primer workspace, ejecutar el primer E2E, identificar/cancelar misión accidental, publicar herramientas y persistencia del túnel. Se ejecutó un primer E2E fallido y contenido; **no** una aceptación funcional exitosa. Continúan abiertos el despliegue coherente, fallback, suscripción real y E2E final. Históricos íntegros en Git, no mezclarlos con el estado actual.
 
-- REUSE FIRST; no rediseñar ni mezclar proyectos.
-- Exclusivamente documentos en esta misión; sin pruebas, sudo, misiones, inferencias, despliegues, permisos globales o cambios de servicios.
-- No tocar los túneles, conectores, Temporal, Worker, OpenCode, FreeLLMAPI ni la terminal del túnel.
-- No crear ni reutilizar automáticamente workspaces; preservar el histórico.
-- No conceder permisos automáticamente ni intervenir la misión accidental.
-- No confundir ready, RUNNING, idle, exit 0, archivo existente o Temporal COMPLETED con aceptación funcional.
-- Código fuente actual y bundle cargado son evidencias diferentes. No atribuir una versión al Worker solo por archivos en disco.
-- Mantener permisos por decisión puntual; no aprobar ejecución generada bajo supuestos de aislamiento no demostrados. El cierre de G01 operativo requiere decisión basada en la ruta que se elija, no reabrir su diseño histórico indiscriminadamente.
-- No incorporar secretos, SQLite, sesiones, outbox, workspaces ni suites privadas al commit documental.
+## 11. Backups privados y preservación
 
-## 10. Integración Git y antecedentes conservados
+Inventario de rutas y SHA-256: [MANIFIESTO_GUARDA_CGL_2026-10-16.json](MANIFIESTO_GUARDA_CGL_2026-10-16.json). Publica referencias/hashes, no su contenido.
+Áreas: contención de misión fallida; gate-despliegue-20261016T222815Z; gate-continuacion-20261016; rollback-candidate-20261016; rollback-compatible-20261016. `verified-fallback.json` no existía al cerrar este guardado. No hay hash que certifique una validación aún no ejecutada.
+No publicar snapshots, node_modules, binarios, estados de misión, callbacks/secretos o logs privados. No borrar `docs/G01_BWRAP_CIERRE_2026-10-12.md` ni `resultado.json`, sin seguimiento y excluidos. Preservar también el borrador externo GUARDA_PENDIENTE.md como histórico, sin reactivar sus pendientes.
 
-- Rama canónica: m03-g5-consolidation-20261008, origin https://github.com/remc87-alt/Constructor-General-Linux.git.
-- Base común: f98140129675e0f0f139e82ff196d4c83aa5f081.
-- Commit local de continuidad preservado: 47a26b3da909f304def391919e583c40dc5781cf (tres documentos).
-- Línea remota comprobada antes de integrar: e216613 → 02902a1e44536053a946bd3d0fd9dd21144d9866.
-- e216613 conserva el diagnóstico inicial del 16/10: perfil multicanal, observaciones del túnel y límites de publicación.
-- 02902a1 conserva la adición CGL-01/CGL-02, matriz C01–C12, reglas INICIA/GUARDA y camino crítico de ese momento.
-- Ambas versiones remotas permanecen íntegras en sus commits, accesibles con git show <commit>:docs/continuidad/2026-10-16/GUARDA_DIAGNOSTICO_CGL_2026-10-16.md. Son antecedentes históricos; no volver a ejecutar sus instrucciones superadas.
-- Integración autorizada mediante merge de ambas líneas, sin rebase, reset, force push ni ramas permanentes adicionales. Los tres commits originales se conservan como ancestros.
-- Conflicto único add/add en este GUARDA. Resolución explícita: estado reconciliado local como referencia operativa, referencias a los antecedentes remotos y metodología incorporadas en este documento. No se aplicó una selección automática ours/theirs ni se descartaron commits.
-- El commit efectivo de la integración se obtiene con git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md; el informe final registra los SHA local/remoto comprobados.
-- No añadir ni borrar los dos archivos sin seguimiento preexistentes: docs/G01_BWRAP_CIERRE_2026-10-12.md y resultado.json.
-- Borrador externo ~/.local/state/cgl-temporal-publicacion/GUARDA_PENDIENTE.md inspeccionado previamente y preservado; sus pendientes antiguos están superados por este GUARDA.
-- Intentos anteriores mediante GitHub update_file fueron rechazados: aprobación requerida, política never. Eso describe el intento anterior, no el resultado de una publicación Git posterior.
-- Publicación de esta integración: se determina comparando el HEAD local con git ls-remote origin refs/heads/m03-g5-consolidation-20261008 después del intento permitido. No declarar respaldo remoto o PASS por la mera existencia del commit local. Ante rechazo, conservar el commit y detenerse, sin intentar otro transporte o credencial.
+## 12. Método de guarda y prueba documental
 
-## 10.1 Procedimiento GUARDA simplificado para futuras sesiones
-
-1. Comprobar repositorio, rama, estado local y actualizar la referencia remota mediante git fetch de la rama canónica. Esto no modifica archivos de trabajo. Comparar HEAD, referencia remota actualizada y ancestro común antes de editar continuidad.
-2. Preservar cualquier cambio local antes de integrar: revisar diff y preparar un commit selectivo autorizado, o detenerse si no está clara su pertenencia. No incluir secretos ni archivos sin seguimiento automáticamente; no resetear ni borrar para limpiar el árbol.
-3. Detectar divergencia con git rev-list --left-right --count HEAD...origin/m03-g5-consolidation-20261008. Integrar primero la historia necesaria con autorización. Revisar conflictos manualmente; evidencia reciente verificada prevalece y antecedentes quedan en Git. Detenerse si la resolución es ambigua.
-4. Mantener un único GUARDA vigente y un único INICIA vigente: los paths de este directorio. La matriz existente es apoyo. Versiones anteriores quedan en el historial, sin crear sistemas paralelos. El INICIA identifica ruta, rama, estado, pendientes reales y DO_NOT_REPEAT.
-5. Revisar diff documental, referencias, coherencia de fechas y ausencia de secretos; confirmar que no se incluye código funcional. Crear un solo commit documental por guardado cuando sea posible; una integración de historiales puede requerir un merge.
-6. Publicar inmediatamente por el mecanismo Git autorizado a la rama canónica, sin force y usando únicamente las credenciales existentes. Solicitar aprobación cuando el mecanismo la requiera; no cambiar políticas o credenciales para evitarla.
-7. Consultar la rama remota con git ls-remote y exigir igualdad con el HEAD local. Solo entonces declarar PASS de guardado/publicación; esto nunca equivale a PASS del MVP.
-8. Si falla, informar el error exacto, los SHA local/remoto y la aprobación o reconciliación necesaria. Conservar el commit local y no repetir intentos idénticos ni eludir controles.
-
-## 11. Pendientes reales y única reanudación
-
-Bloqueo operativo inmediato actualizado tras Fase A: la inspección focalizada recomendó preparar un workspace nuevo mediante workspace-setup.ts y asociarlo a OpenCode :4098 usando t3-opencode.sh con parada/arranque controlados. El flujo genérico exige artefactos frescos, git/política válidos y coincidencia de directory/worktree; el histórico sin cambios no satisface esa ruta. Preparación, cambio de cwd y ejecución E2E siguen pendientes de autorización específica; la autorización de persistencia del túnel no los incluye. Las raíces y la identidad de OpenCode YA están confirmadas.
-No afirmar que sea indispensable un workspace nuevo para cualquier E2E.
-
-Próxima misión, todavía NO ejecutada: **CGL-E2E-PRIMERA-ACEPTACION**.
-1. Inspección focalizada del código para determinar si el flujo histórico admite una prueba controlada sin crear workspace.
-2. Si no, justificar el workspace nuevo y el mecanismo existente para asociarlo con OpenCode, identificando cualquier intervención necesaria.
-3. Presentar solicitud exacta, validación y riesgos; obtener autorización correspondiente.
-4. Ejecutar una sola misión Temporal real y recuperar resultado verificable, sin sustituirla por start_mission.
-5. Después abordar aceptación del retorno automático MCP Events → ChatGPT.
-
-No reabrir investigación del túnel, herramientas, SDK, raíces del oráculo ni identidad/cwd ya identificados.
-
-## 12. Persistencia del túnel Temporal — intervención autorizada del 16/10
-
-Estado: **PASS operativo del servicio; aceptación del catálogo posterior al traspaso pendiente de confirmación desde ChatGPT**. No es aceptación E2E del MVP.
-Esta intervención posterior fue autorizada expresamente y prevalece, solo para el servicio del túnel Temporal, sobre las restricciones de la misión documental anterior. No amplía autorizaciones sobre el E2E ni otros servicios.
-
-### Configuración y límites
-
-- Unidad instalada: /home/rodrigo_mella/.config/systemd/user/cgl-temporal-publicacion.service, WantedBy=default.target. No se creó un segundo túnel ni otro complemento.
-- Mismo perfil cgl-temporal-publicacion y mismo ID tunnel_6ad26dc258548191a71dcf157b1b8600; tres perfiles existentes conservan sus hashes. Autenticación mediante la misma referencia file:, sin copiar ni modificar el secreto.
-- Type=simple; Restart=always; RestartSec=15s; StartLimitIntervalSec=0; KillMode=control-group; TimeoutStopSec=30s; UMask=0077; stdout/stderr al journal. HOME y PATH explícitos para el usuario; directorio de trabajo del checkout CGL.
-- ExecStart usa /usr/bin/flock --no-fork --nonblock sobre ~/.local/state/cgl-temporal-publicacion/runtime.lock, seguido del tunnel-client existente con run --profile cgl-temporal-publicacion --control-plane.poll-channel main y los archivos health.url/runtime.pid de ese estado. El bloqueo excluye arranques cooperantes mediante esta unidad, no arranques manuales que ignoren el lock. No iniciar manualmente otro cliente para el mismo ID.
-- systemd=true y Linger=yes ya estaban configurados; no se modificaron WSL, linger ni políticas globales. El servicio no opera cuando Ubuntu/WSL está detenido ni configura arranque de Windows.
-
-### Acceso y traspaso sin solapamiento
-
-- systemctl --user falla autenticando por /run/user/1000/systemd/private; no implica caída del gestor. busctl con --address=unix:path=/run/user/1000/bus permite administración y consulta autenticadas del gestor UID 1000.
-- Antes de instalar: GetUnit/ListUnits/ListUnitFiles no encontraron unidad CGL/túnel. Se creó solo esta unidad.
-- systemd-analyze --user verify salió 0 con aviso «Failed to bind private socket: Address already in use». La carga efectiva por D-Bus confirmó LoadState=loaded, FragmentPath exacto, ExecStart esperado y Restart=always antes del traspaso.
-- La sesión original 67226 estaba bajo control. Se envió Ctrl+C solo a esa sesión; terminó y su endpoint anterior cerró antes de StartUnit.
-- EnableUnitFiles y StartUnit por D-Bus terminaron con código 0. Unidad enabled, active/running, primer MainPID 1268957. Nuevo endpoint readyz HTTP 200; dispatcher accepting. No se reiniciaron otros servicios.
-
-### Recuperación y unicidad demostradas
-
-- Fallo controlado autorizado mediante Manager.KillUnit sobre cgl-temporal-publicacion.service, destino main, señal 9. No se enviaron señales a PIDs de otros servicios.
-- Recuperación automática observada: MainPID 1268957 → 1270052, NRestarts 0 → 1, readyz HTTP 200 tras RestartSec=15s.
-- Service.GetProcesses confirmó un solo tunnel-client en la unidad y ausencia del MainPID anterior. Enumeración de procesos del user@1000.service filtrada por ejecutable y perfil exactos confirmó únicamente PID 1270052 para cgl-temporal-publicacion. No se publican datos de procesos de otros proyectos.
-- Sondeo exitoso registrado después del reinicio; endpoint administrativo informa el mismo ID. journalctl --user -u cgl-temporal-publicacion.service permitió leer el arranque.
-- La terminal original ya estaba cerrada: la ejecución y el reinicio posteriores fueron gestionados por systemd, demostrando independencia de esa terminal.
-- PIDs y puertos son observaciones fechadas, no valores permanentes. El puerto administrativo es dinámico: leer ~/.local/state/cgl-temporal-publicacion/health.url.
-
-### Verificación ChatGPT y rollback
-
-- Esta sesión Codex no dispone de herramientas Temporal; no se usó un proceso auxiliar ni una misión para repetir el catálogo. Se pidió al Director confirmar desde ChatGPT la conservación de las tres Temporal y las cuatro principales después del traspaso. Hasta recibir esa confirmación, este punto está pendiente; no hay evidencia de pérdida de herramientas.
-- Rollback disponible: Manager.StopUnit con unidad exacta y modo replace; confirmar parada, deshabilitar solo esa unidad con DisableUnitFiles; recuperar el comando manual anterior únicamente después de verificar ausencia de otra instancia. No eliminar perfiles, credenciales ni datos. Retirar solo la unidad creada y Reload si se decide revertir su instalación.
-- Comando manual previo: ~/.local/bin/tunnel-client run --profile cgl-temporal-publicacion --control-plane.poll-channel main --health.url-file ~/.local/state/cgl-temporal-publicacion/health.url --pid.file ~/.local/state/cgl-temporal-publicacion/runtime.pid. No ejecutarlo mientras el servicio esté activo.
-- D-Bus: destino org.freedesktop.systemd1, objeto /org/freedesktop/systemd1, interfaz org.freedesktop.systemd1.Manager. Consultar unidad mediante GetUnit; propiedades Unit y Service; procesos mediante interfaz Service.GetProcesses. Los comandos habituales systemctl --user dependen del acceso al socket privado de la sesión; usar el bus validado cuando fallen.
-- No se modificaron OpenCode, Worker, Temporal Server, túnel principal, credenciales ni código funcional. No hubo misiones ni inferencias. Próximo frente: continuar Fase A/solicitar autorización de preparación E2E según decisión focalizada existente; no ejecutar todavía ni abrir MCP Events.
+Fetch de referencia remota → preservar/revisar cambios y excluir privados → detectar divergencia → commits acotados (código preparado y documentación) → push normal únicamente a rama autorizada → comparar SHA local/remoto y leer documentos desde la referencia remota. Sin force, merge automático, main ni credenciales alternativas. Si falla, conservar commits locales y reportar el error; no declarar GUARDA PASS.
+INICIA debe recuperar objetivo, arquitectura, estado real, evidencias, cambios, riesgos, decisiones, próxima acción, restricciones y DO_NOT_REPEAT leyendo exclusivamente los documentos publicados. La simulación es documental: no ejecuta scripts, pruebas ni servicios. La verificación remota y sus commits se informan al finalizar este guardado.
