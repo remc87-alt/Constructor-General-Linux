@@ -38,3 +38,14 @@ Alcance exclusivo Constructor General Linux. La fuente «Ubuntu/Director» es ev
 | Conflicto add/add solo en GUARDA | Git merge --no-commit | 16/10/2026 | Confirmado | Estado reconciliado como vigente; remotos íntegros en sus commits, sin reactivar pendientes superados |
 | INICIA/GUARDA vigentes y procedimiento simplificado | GUARDA §10.1 e INICIA | 16/10/2026 | Documentado | Fetch/preservación/divergencia antes de guardar; publicar y verificar SHA |
 | Publicación de integración | Comparación Git posterior | 16/10/2026 | Pendiente hasta igualdad de SHA | Informe final con error o confirmación; no declarar PASS por commit local |
+
+## Persistencia del túnel existente — 16/10
+
+| Hecho | Fuente | Fecha | Clasificación | Acción |
+|---|---|---|---|---|
+| Gestor usuario accesible por D-Bus, socket privado systemctl falla | Lecturas busctl y systemctl | 16/10/2026 | Confirmado | Administrar mediante bus validado; no cambiar políticas globales |
+| Unidad nueva enabled y active/running | EnableUnitFiles, StartUnit y propiedades | 16/10/2026 | PASS operativo | Preservar servicio, perfil e ID existentes |
+| Terminal 67226 cerrada antes del servicio; una instancia exacta | Salida terminal, cierre endpoint, Service.GetProcesses y filtrado del cgroup usuario | 16/10/2026 | Confirmado | No iniciar clientes manuales paralelos |
+| Recuperación automática NRestarts 0→1, MainPID distinto y readyz 200 | KillUnit main autorizado y propiedades/endpoint posteriores | 16/10/2026 | PASS operativo | No repetir prueba de fallo sin causa |
+| Catálogo ChatGPT después del traspaso | Consulta pendiente al Director | 16/10/2026 | Pendiente | Confirmar tres Temporal y cuatro principales, sin misiones |
+| Perfiles y credencial conservados | Hashes y referencia sin escritura | 16/10/2026 | Confirmado | No copiar secretos ni alterar puente principal |

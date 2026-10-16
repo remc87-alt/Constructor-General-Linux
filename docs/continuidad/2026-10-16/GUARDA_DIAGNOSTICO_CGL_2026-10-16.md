@@ -47,7 +47,7 @@ MCP Events existe en el adaptador, pero el retorno automático aceptado a ChatGP
 | Capacidad | Estado y límite |
 |---|---|
 | Puente principal, misma sesión, consulta y continuación | PASS histórico; conservar, no repetir pruebas básicas |
-| Túnel y complemento Constructor Linux Temporal | Publicación/disponibilidad confirmadas por Director/usuario durante el 16/10; no garantía de persistencia futura |
+| Túnel y complemento Constructor Linux Temporal | Publicación previa confirmada por Director; runtime transferido a systemd de usuario y recuperación demostrada (§12). Catálogo posterior al traspaso pendiente de confirmación desde ChatGPT. |
 | Catálogo auxiliar CGL-02 | PASS local initialize/tools/list; prueba cerrada, distinta de aceptación funcional |
 | Temporal Server/Worker | Activos observados en Ubuntu el 16/10; no reconsultados durante este GUARDA |
 | Worker → OpenCode → proveedor | Ejecuciones históricas; circuito actual integral aún sin aceptación |
@@ -109,7 +109,7 @@ Durante este GUARDA: no crear otro, no modificar el histórico, no borrar artefa
   get_temporal_mission, reply_permission, start_mission, start_temporal_mission.
 - Puente principal conservado.
 - Perfil local nuevo creado anteriormente con referencia segura, sin copiar la clave; doctor y sondeo fueron observados.
-- Persistencia futura del runtime no garantizada. No detener la terminal que mantiene el túnel.
+- El arranque original dependía de terminal. Esa dependencia fue resuelta mediante el servicio de usuario del §12; no detener el servicio fuera de una intervención autorizada. WSL debe permanecer ejecutándose.
 - No crear otro túnel/complemento ni repetir publicación, health o tools/list auxiliar.
 - Que el sandbox no exponga las herramientas Temporal a Codex no contradice su disponibilidad confirmada en ChatGPT Director.
 
@@ -187,7 +187,7 @@ Las pruebas de generic-workflow.integration.test.ts usan workflow real y activid
 
 ## 11. Pendientes reales y única reanudación
 
-Bloqueo operativo inmediato: no está determinada ni aceptada una ruta de misión compatible con el directorio actual de OpenCode y las reglas de preparación/validación. Las raíces y la identidad de OpenCode YA están confirmadas.
+Bloqueo operativo inmediato actualizado tras Fase A: la inspección focalizada recomendó preparar un workspace nuevo mediante workspace-setup.ts y asociarlo a OpenCode :4098 usando t3-opencode.sh con parada/arranque controlados. El flujo genérico exige artefactos frescos, git/política válidos y coincidencia de directory/worktree; el histórico sin cambios no satisface esa ruta. Preparación, cambio de cwd y ejecución E2E siguen pendientes de autorización específica; la autorización de persistencia del túnel no los incluye. Las raíces y la identidad de OpenCode YA están confirmadas.
 No afirmar que sea indispensable un workspace nuevo para cualquier E2E.
 
 Próxima misión, todavía NO ejecutada: **CGL-E2E-PRIMERA-ACEPTACION**.
@@ -198,3 +198,41 @@ Próxima misión, todavía NO ejecutada: **CGL-E2E-PRIMERA-ACEPTACION**.
 5. Después abordar aceptación del retorno automático MCP Events → ChatGPT.
 
 No reabrir investigación del túnel, herramientas, SDK, raíces del oráculo ni identidad/cwd ya identificados.
+
+## 12. Persistencia del túnel Temporal — intervención autorizada del 16/10
+
+Estado: **PASS operativo del servicio; aceptación del catálogo posterior al traspaso pendiente de confirmación desde ChatGPT**. No es aceptación E2E del MVP.
+Esta intervención posterior fue autorizada expresamente y prevalece, solo para el servicio del túnel Temporal, sobre las restricciones de la misión documental anterior. No amplía autorizaciones sobre el E2E ni otros servicios.
+
+### Configuración y límites
+
+- Unidad instalada: /home/rodrigo_mella/.config/systemd/user/cgl-temporal-publicacion.service, WantedBy=default.target. No se creó un segundo túnel ni otro complemento.
+- Mismo perfil cgl-temporal-publicacion y mismo ID tunnel_6ad26dc258548191a71dcf157b1b8600; tres perfiles existentes conservan sus hashes. Autenticación mediante la misma referencia file:, sin copiar ni modificar el secreto.
+- Type=simple; Restart=always; RestartSec=15s; StartLimitIntervalSec=0; KillMode=control-group; TimeoutStopSec=30s; UMask=0077; stdout/stderr al journal. HOME y PATH explícitos para el usuario; directorio de trabajo del checkout CGL.
+- ExecStart usa /usr/bin/flock --no-fork --nonblock sobre ~/.local/state/cgl-temporal-publicacion/runtime.lock, seguido del tunnel-client existente con run --profile cgl-temporal-publicacion --control-plane.poll-channel main y los archivos health.url/runtime.pid de ese estado. El bloqueo excluye arranques cooperantes mediante esta unidad, no arranques manuales que ignoren el lock. No iniciar manualmente otro cliente para el mismo ID.
+- systemd=true y Linger=yes ya estaban configurados; no se modificaron WSL, linger ni políticas globales. El servicio no opera cuando Ubuntu/WSL está detenido ni configura arranque de Windows.
+
+### Acceso y traspaso sin solapamiento
+
+- systemctl --user falla autenticando por /run/user/1000/systemd/private; no implica caída del gestor. busctl con --address=unix:path=/run/user/1000/bus permite administración y consulta autenticadas del gestor UID 1000.
+- Antes de instalar: GetUnit/ListUnits/ListUnitFiles no encontraron unidad CGL/túnel. Se creó solo esta unidad.
+- systemd-analyze --user verify salió 0 con aviso «Failed to bind private socket: Address already in use». La carga efectiva por D-Bus confirmó LoadState=loaded, FragmentPath exacto, ExecStart esperado y Restart=always antes del traspaso.
+- La sesión original 67226 estaba bajo control. Se envió Ctrl+C solo a esa sesión; terminó y su endpoint anterior cerró antes de StartUnit.
+- EnableUnitFiles y StartUnit por D-Bus terminaron con código 0. Unidad enabled, active/running, primer MainPID 1268957. Nuevo endpoint readyz HTTP 200; dispatcher accepting. No se reiniciaron otros servicios.
+
+### Recuperación y unicidad demostradas
+
+- Fallo controlado autorizado mediante Manager.KillUnit sobre cgl-temporal-publicacion.service, destino main, señal 9. No se enviaron señales a PIDs de otros servicios.
+- Recuperación automática observada: MainPID 1268957 → 1270052, NRestarts 0 → 1, readyz HTTP 200 tras RestartSec=15s.
+- Service.GetProcesses confirmó un solo tunnel-client en la unidad y ausencia del MainPID anterior. Enumeración de procesos del user@1000.service filtrada por ejecutable y perfil exactos confirmó únicamente PID 1270052 para cgl-temporal-publicacion. No se publican datos de procesos de otros proyectos.
+- Sondeo exitoso registrado después del reinicio; endpoint administrativo informa el mismo ID. journalctl --user -u cgl-temporal-publicacion.service permitió leer el arranque.
+- La terminal original ya estaba cerrada: la ejecución y el reinicio posteriores fueron gestionados por systemd, demostrando independencia de esa terminal.
+- PIDs y puertos son observaciones fechadas, no valores permanentes. El puerto administrativo es dinámico: leer ~/.local/state/cgl-temporal-publicacion/health.url.
+
+### Verificación ChatGPT y rollback
+
+- Esta sesión Codex no dispone de herramientas Temporal; no se usó un proceso auxiliar ni una misión para repetir el catálogo. Se pidió al Director confirmar desde ChatGPT la conservación de las tres Temporal y las cuatro principales después del traspaso. Hasta recibir esa confirmación, este punto está pendiente; no hay evidencia de pérdida de herramientas.
+- Rollback disponible: Manager.StopUnit con unidad exacta y modo replace; confirmar parada, deshabilitar solo esa unidad con DisableUnitFiles; recuperar el comando manual anterior únicamente después de verificar ausencia de otra instancia. No eliminar perfiles, credenciales ni datos. Retirar solo la unidad creada y Reload si se decide revertir su instalación.
+- Comando manual previo: ~/.local/bin/tunnel-client run --profile cgl-temporal-publicacion --control-plane.poll-channel main --health.url-file ~/.local/state/cgl-temporal-publicacion/health.url --pid.file ~/.local/state/cgl-temporal-publicacion/runtime.pid. No ejecutarlo mientras el servicio esté activo.
+- D-Bus: destino org.freedesktop.systemd1, objeto /org/freedesktop/systemd1, interfaz org.freedesktop.systemd1.Manager. Consultar unidad mediante GetUnit; propiedades Unit y Service; procesos mediante interfaz Service.GetProcesses. Los comandos habituales systemctl --user dependen del acceso al socket privado de la sesión; usar el bus validado cuando fallen.
+- No se modificaron OpenCode, Worker, Temporal Server, túnel principal, credenciales ni código funcional. No hubo misiones ni inferencias. Próximo frente: continuar Fase A/solicitar autorización de preparación E2E según decisión focalizada existente; no ejecutar todavía ni abrir MCP Events.

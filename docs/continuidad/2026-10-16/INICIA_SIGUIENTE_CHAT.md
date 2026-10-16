@@ -24,10 +24,10 @@ Antes de otro guardado: seguir el procedimiento simplificado del GUARDA §10.1: 
 2. Constructor Linux Temporal instalado y ocho herramientas confirmadas por Director, incluidas start/get/decide Temporal. No repetir configuración ni descubrimiento.
 3. Worker heredado, preparador y validador comparten /home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces; raíces YA comprobadas.
 4. OpenCode :4098 fue identificado como rodrigo_mella UID 1000, ejecutable /home/rodrigo_mella/.opencode/bin/opencode; cwd termina en cgl-v1-csv-expense-20261009-003.
-5. Falta decidir la ruta E2E compatible con ese directorio y las reglas del contrato; un workspace nuevo no es una solución automática.
+5. La Fase A posterior al guardado recomendó workspace nuevo mediante mecanismo existente y cambio controlado de cwd de OpenCode :4098 mediante su lanzador, pendiente de autorización; no se ejecutó. El flujo genérico rechaza artefactos previos y exige coincidencia de directory/worktree. No iniciar la preparación implícitamente.
 
 Las observaciones anteriores son del 16/10, no garantía de que los PIDs sigan vivos.
-Túnel Temporal: tunnel_6ad26dc258548191a71dcf157b1b8600; perfil cgl-temporal-publicacion. No detener la terminal que lo sostiene.
+Túnel Temporal: tunnel_6ad26dc258548191a71dcf157b1b8600; perfil cgl-temporal-publicacion. Servicio systemd de usuario cgl-temporal-publicacion.service habilitado y recuperado automáticamente; ya no depende de la terminal original. No detener el servicio. Ver GUARDA §12 para administración por D-Bus, registros y rollback; WSL debe permanecer en ejecución.
 No confundir indisponibilidad de herramientas/procesos en el sandbox Codex con ausencia en ChatGPT o Ubuntu anfitrión.
 
 ## Fallo que no debe repetirse
@@ -58,3 +58,8 @@ MCP Events → ChatGPT permanece pendiente y se aborda después de la ejecución
 ## Prompt breve
 
 Continúa Constructor General Linux en m03-g5-consolidation-20261008. Lee el GUARDA, matriz e INICIA vigentes del 16/10; compara Git local/remoto y conserva el historial integrado. Túnel/herramientas, raíces heredadas e identidad/cwd OpenCode ya están comprobados: no repetirlos. Ejecuta solo la inspección focalizada inicial de CGL-E2E-PRIMERA-ACEPTACION para decidir si el flujo histórico admite la prueba sin otro workspace; si no, justifica la preparación y asociación con OpenCode. No inicies misiones ni cambies servicios/workspaces sin la autorización correspondiente.
+
+## Persistencia añadida el 16/10
+
+Unidad de usuario cgl-temporal-publicacion.service: enabled, active/running; perfil y autenticación originales intactos. Sesión anterior 67226 cerrada durante traspaso autorizado. Recuperación demostrada con fallo controlado: NRestarts 0→1 y readyz 200, una instancia por perfil observada. Administración D-Bus disponible por unix:path=/run/user/1000/bus; systemctl --user falla por su socket privado desde este sandbox. No confundirlo con fallo del gestor.
+Confirmación de catálogo desde ChatGPT posterior al traspaso: pendiente hasta respuesta del Director; no repetir tools/list auxiliar ni iniciar misiones para comprobarlo. No declarar PASS global por el servicio.
