@@ -1,4 +1,4 @@
-import { proxyActivities, defineSignal, defineQuery, setHandler, condition, log, workflowInfo, ActivityFailure, ApplicationFailure, CancellationScope, isCancellation } from "@temporalio/workflow";
+import { proxyActivities, defineSignal, defineQuery, setHandler, condition, log, workflowInfo, ActivityFailure, ApplicationFailure, CancellationScope, isCancellation, patched } from "@temporalio/workflow";
 import type * as activities from "./activities";
 import { oracleExecutionIdFromTemporalRun } from "./oracle-execution-id";
 
@@ -327,21 +327,23 @@ export async function genericConstructorMissionWorkflow(input: { contract: Gener
     const expected = s.pending_permission && { mission_id: s.mission_id, session_id: s.pending_permission.session_id, permission_id: s.pending_permission.permission_id, patterns: s.pending_permission.patterns };
     if (expected && acceptGenericPermission(expected, reply) && !decisions.has(reply.permission_id)) decisions.set(reply.permission_id, reply);
   });
-  // Every terminal path goes through finish(); a started session is aborted
-  // unless the mission passed, so no OpenCode work continues unobserved.
+  // New executions contain every unsuccessful terminal path. Pre-patch
+  // histories must replay their recorded closure without inserting an Activity.
   // startAttempted (not session_id): an ambiguous start may have created a
   // session the workflow never learned about; the adapter aborts by mission id.
   let startAttempted = false;
   const finish = async (phase: string, functional: GenericMissionState["functional_status"], nextAction: GenericMissionState["next_action"] = "review_evidence") => {
+    const containOnClose = patched("generic-terminal-containment-v1");
     s.functional_status = functional;
     if (phase === "budget_exhausted") s.budget_exhausted = true;
     mark(phase);
-    if (startAttempted && functional !== "passed") {
+    if (containOnClose && startAttempted && functional !== "passed") {
       // Containment must run even when the workflow itself is being cancelled.
       try { await CancellationScope.nonCancellable(() => abortMission({ missionId: contract.missionId })); mark("session_aborted"); }
       catch { s.last_error ??= "AbortFailed"; mark("session_abort_failed"); }
     }
-    s.pending_permission = null; s.permission_status = "none"; s.next_action = nextAction; s.temporal_status = "completed";
+    if (containOnClose) { s.pending_permission = null; s.permission_status = "none"; }
+    s.next_action = nextAction; s.temporal_status = "completed";
     return s;
   };
   const expired = () => budgetExpired(Date.now(), deadline);

@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Context, heartbeat, sleep, ApplicationFailure } from "@temporalio/activity";
 import { Client } from "@temporalio/client";
 import { NativeConnection } from "@temporalio/worker";
@@ -25,12 +26,13 @@ export function monitorEndsAt(t0: number, maxMs: number, deadlineAt?: number): n
   return Math.min(t0 + maxMs, deadlineAt ?? Number.POSITIVE_INFINITY);
 }
 
-// T3 activities. They drive the EXISTING MCP adapter (isolated instance copy,
-// own mission map) over STDIO — the same contract the Director uses — against
+// T3 activities drive the versioned repository MCP adapter over STDIO, sharing
+// the existing Temporal mission map with the persistent Temporal connector against
 // the POC-exclusive OpenCode on :4098. No direct OpenCode writes here.
 
 const ROOT = `${os.homedir()}/.local/state/constructor-temporal-poc`;
-const ADAPTER = `${ROOT}/adapter-instance`;
+const ADAPTER = fileURLToPath(new URL("../../../mcp-opencode-adapter/", import.meta.url));
+const TEMPORAL_STATE = `${ROOT}/adapter-instance`;
 const OC_URL = "http://127.0.0.1:4098";
 let checkpointClient: Promise<Client> | undefined;
 
@@ -61,8 +63,9 @@ function adapterEnv(): NodeJS.ProcessEnv {
     ...process.env,
     OPENCODE_URL: OC_URL,
     OPENCODE_SERVER_PASSWORD: fs.readFileSync(`${ROOT}/run/opencode-t3.password`, "utf8").trim(),
-    MCP_SUBSCRIPTIONS_FILE: `${ADAPTER}/state/subscriptions.json`,
-    MCP_EVENT_OUTBOX_FILE: `${ADAPTER}/state/event-outbox.json`,
+    MCP_MISSION_MAP_FILE: `${TEMPORAL_STATE}/.mission-map.json`,
+    MCP_SUBSCRIPTIONS_FILE: `${TEMPORAL_STATE}/state/subscriptions.json`,
+    MCP_EVENT_OUTBOX_FILE: `${TEMPORAL_STATE}/state/event-outbox.json`,
     MCP_EVENTS_EMITTER: "off",
     MCP_TRANSPORT: ""
   };

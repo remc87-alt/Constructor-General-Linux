@@ -64,7 +64,7 @@ export const EVENT_DEFINITIONS = [
   {
     name: "mission.completed",
     description:
-      "Mission accepted as completed. Not emitted by this adapter yet: an OpenCode turn ending (finish=stop) is not mission success, and success is decided only by the Director.",
+      "Not emitted on OpenCode turn end. With Temporal terminal observation enabled, reports a durable functional passed result backed by independent oracle evidence. The Director reviews the evidence.",
     delivery: ["webhook"],
     inputSchema: missionSubscriptionSchema,
     payloadSchema: payloadSchema({ result: { type: "string" } })
@@ -72,7 +72,7 @@ export const EVENT_DEFINITIONS = [
   {
     name: "mission.failed",
     description:
-      "The mission's latest OpenCode turn ended with an error reported by OpenCode (technical turn failure; the Director decides whether the mission itself failed).",
+      "An OpenCode technical turn error, or a durable Temporal terminal failure. Temporal payloads include workflow/run correlation and functional status; the Director reviews the evidence.",
     delivery: ["webhook"],
     inputSchema: missionSubscriptionSchema,
     payloadSchema: payloadSchema({ error: { type: "string" } })
@@ -80,7 +80,7 @@ export const EVENT_DEFINITIONS = [
   {
     name: "mission.blocked",
     description:
-      "The mission is waiting on input: OpenCode asked a question, or a provider retry requires user action.",
+      "OpenCode requires input, or a durable Temporal result is functionally blocked. A terminal blocked result is not an outstanding permission authorization.",
     delivery: ["webhook"],
     inputSchema: missionSubscriptionSchema,
     payloadSchema: payloadSchema({ reason: { type: "string" } })

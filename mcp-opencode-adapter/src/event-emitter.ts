@@ -342,6 +342,7 @@ export type EmitterOptions = {
   log?: (message: string) => void;
   // Observability hook for each technical end of turn (also emitted as mission.turn_completed).
   onTurnCompleted?: (turn: TurnCompleted) => void;
+  terminalResult?: (missionId: string, sessionId: string) => Promise<Emission | null>;
 };
 
 export class MissionEventEmitter {
@@ -627,6 +628,27 @@ export class MissionEventEmitter {
   // Called after a successful events/subscribe for this mission.
   async evaluatePending(missionId: string): Promise<DeliveryOutcome[]> {
     return this.evaluateMission(missionId, true);
+  }
+
+  // Internal observation, not MCP polling delivery: callbacks still use the
+  // existing signed HTTPS outbox. Re-read durable results after any restart.
+  async reconcileTerminalResults(): Promise<void> {
+    if (!this.opts.terminalResult) return;
+    const ids = new Set(activeSubscriptions().filter((s) => s.principal === PRINCIPAL &&
+      ["mission.completed", "mission.failed", "mission.blocked"].includes(s.name)).map((s) => s.arguments.mission_id));
+    for (const id of ids) {
+      if (typeof id !== "string") continue;
+      const mission = this.opts.missions()[id];
+      if (!mission) continue;
+      try {
+        await this.enqueue(mission.session_id, async () => {
+          const emission = await this.opts.terminalResult!(id, mission.session_id);
+          if (emission && emission.missionId === id && emission.sessionId === mission.session_id) await this.emit(emission);
+        });
+      } catch {
+        this.log("Temporal terminal observation failed; will retry");
+      }
+    }
   }
 
   // One-shot catch-up for every subscribed mission (startup / stream reconnect).

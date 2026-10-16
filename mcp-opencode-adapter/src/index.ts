@@ -3,20 +3,24 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import fs from "node:fs";
 import path from "node:path";
+import { DurableMissionStore } from "./durable-mission-store.ts";
 import { registerEventHandlers } from "./events.ts";
 import { latestAssistant, MissionEventEmitter, runOpenCodeEventStream } from "./event-emitter.ts";
-import { decideTemporalPermission, getTemporalMission, startTemporalMission, temporalBridgeFromEnv } from "./temporal-bridge.ts";
+import { decideTemporalPermission, getTemporalMission, startTemporalMission, temporalBridgeFromEnv, readTemporalTerminal } from "./temporal-bridge.ts";
 
 const BASE = process.env.OPENCODE_URL ?? "http://127.0.0.1:4096";
-const STATE_FILE = path.resolve(
+const STATE_FILE = process.env.MCP_MISSION_MAP_FILE ?? path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "..",
   ".mission-map.json"
 );
+const sharedStore = process.env.MCP_MISSION_MAP_FILE ? new DurableMissionStore(STATE_FILE) : null;
+const missionOperation = <T>(id: string, action: () => Promise<T>) => sharedStore ? sharedStore.exclusive(id, action) : action();
 
 import { abortMission, continueOnce, type MissionMap } from "./mission-ops.ts";
 
 function loadState(): MissionMap {
+  if (sharedStore) return sharedStore.load();
   try {
     return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
   } catch {
@@ -34,6 +38,7 @@ function saveState(state: MissionMap) {
 // Read-modify-write of ONE mission on a fresh copy, so a concurrent adapter's
 // update to another field or mission (e.g. aborted_at) is not overwritten.
 function patchMission(missionId: string, fields: Partial<MissionMap[string]>) {
+  if (sharedStore) { sharedStore.patch(missionId, fields); return; }
   const fresh = loadState();
   fresh[missionId] = { ...fresh[missionId], ...fields } as MissionMap[string];
   saveState(fresh);
@@ -120,7 +125,10 @@ console.error(`OpenCode health PASS; version=${health.version ?? "unknown"}`);
 let emitter: MissionEventEmitter | null = null;
 if (process.env.MCP_EVENTS_EMITTER === "on") {
   try {
-    emitter = new MissionEventEmitter({ oc, missions: () => missions });
+    emitter = new MissionEventEmitter({ oc, missions: loadState,
+      terminalResult: process.env.MCP_TEMPORAL_RESULTS === "on" && temporalBridge ?
+        (missionId, sessionId) => readTemporalTerminal(temporalBridge, missionId, sessionId) : undefined,
+    });
   } catch (e: any) {
     // e.g. OutboxLockedError: another live adapter owns the outbox.
     console.error(`MCP Events emitter disabled: ${e?.message ?? e}`);
@@ -132,6 +140,15 @@ if (emitter) {
   // Durable recovery even if the OpenCode stream never connects.
   active.resumePending().catch((e) => console.error(`resume pending failed: ${e?.message ?? e}`));
   void runOpenCodeEventStream({ url: BASE + "/event", headers: authHeaders(), emitter: active });
+  if (process.env.MCP_TEMPORAL_RESULTS === "on" && temporalBridge) {
+    console.error("Temporal terminal observer ENABLED; delivery requires active subscriptions");
+    const observe = async () => {
+      try { await active.reconcileTerminalResults(); }
+      catch { console.error("Temporal terminal observation unavailable"); }
+      finally { setTimeout(observe, 10_000).unref(); }
+    };
+    void observe();
+  }
 }
 
   // Function to create the MCP server with all handlers
@@ -163,7 +180,8 @@ if (emitter) {
             mission_id ??
             `mission-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-          if (missions[id]) {
+          return await missionOperation(id, async () => {
+          if (loadState()[id]) {
             return toolError(`mission_id already exists: ${id}`);
           }
 
@@ -196,6 +214,7 @@ if (emitter) {
             session_id: sessionID,
             status: "running",
           });
+          });
         } catch (e: any) {
           console.error("start_mission:", e?.message ?? e);
           return toolError(e?.message ?? String(e));
@@ -217,7 +236,7 @@ if (emitter) {
       },
       async ({ mission_id, prompt, continuation_id }) => {
         try {
-          return result(await continueOnce(missionDeps, { mission_id, prompt, continuation_id }));
+          return await missionOperation(mission_id, async () => result(await continueOnce(missionDeps, { mission_id, prompt, continuation_id })));
         } catch (e: any) {
           console.error("continue_mission:", e?.message ?? e);
           return toolError(e?.message ?? String(e));
@@ -236,7 +255,7 @@ if (emitter) {
       },
       async ({ mission_id }) => {
         try {
-          return result(await abortMission(missionDeps, { mission_id }));
+          return await missionOperation(mission_id, async () => result(await abortMission(missionDeps, { mission_id })));
         } catch (e: any) {
           console.error("abort_mission:", e?.message ?? e);
           return toolError(e?.message ?? String(e));
@@ -255,7 +274,7 @@ if (emitter) {
       },
       async ({ mission_id }) => {
         try {
-          const mission = missions[mission_id];
+          const mission = loadState()[mission_id];
 
           if (!mission) {
             return toolError(`unknown mission_id: ${mission_id}`);
@@ -308,10 +327,20 @@ if (emitter) {
       },
       async ({ mission_id, permission_id, decision }) => {
         try {
-          const mission = missions[mission_id];
+          return await missionOperation(mission_id, async () => {
+          const mission = loadState()[mission_id];
 
           if (!mission) {
             return toolError(`unknown mission_id: ${mission_id}`);
+          }
+
+          if (sharedStore) {
+            if (decision === "once" && mission.aborted_at) return toolError("mission aborted");
+            const pending = await oc("/permission");
+            if (!Array.isArray(pending) || !pending.some((p: any) =>
+              (p.id ?? p.permissionID) === permission_id && (p.sessionID ?? p.session_id) === mission.session_id)) {
+              return toolError("permission does not belong to this mission session or is no longer pending");
+            }
           }
 
           await oc(
@@ -328,6 +357,7 @@ if (emitter) {
             permission_id,
             decision,
             status: "accepted",
+          });
           });
         } catch (e: any) {
           console.error("reply_permission:", e?.message ?? e);
@@ -393,6 +423,7 @@ if (emitter) {
           emitter.evaluatePending(missionId).catch((e) =>
             console.error(`post-subscribe evaluation failed: ${e?.message ?? e}`)
           );
+          void emitter.reconcileTerminalResults().catch(() => console.error("post-subscribe terminal observation unavailable"));
         }, 1000).unref();
       }
     });

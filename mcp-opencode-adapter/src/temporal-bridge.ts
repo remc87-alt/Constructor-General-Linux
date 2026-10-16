@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { terminalEmission } from "./temporal-terminal-events.ts";
 
 export type TemporalBridgeConfig = {
   bin: string;
@@ -16,15 +17,31 @@ export function temporalBridgeFromEnv(env: NodeJS.ProcessEnv = process.env): Tem
   return { bin, address, namespace: env.TEMPORAL_NAMESPACE ?? "default", taskQueue };
 }
 
-async function invoke(config: TemporalBridgeConfig, args: string[]) {
+async function invoke(config: TemporalBridgeConfig, args: string[], bounded = false) {
   return await new Promise<{ code: number; stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn(config.bin, ["--address", config.address, "--namespace", config.namespace, ...args], { shell: false });
+    const timer = bounded ? setTimeout(() => { child.kill("SIGKILL"); reject(new Error("Temporal terminal read timed out")); }, 10_000) : undefined;
+    const fail = () => { child.kill("SIGKILL"); reject(new Error("Temporal terminal response exceeds limit")); };
     let stdout = "", stderr = "";
-    child.stdout.on("data", (chunk) => { stdout += String(chunk); });
-    child.stderr.on("data", (chunk) => { stderr += String(chunk); });
-    child.once("error", reject);
-    child.once("close", (code) => resolve({ code: code ?? -1, stdout, stderr }));
+    child.stdout.on("data", (chunk) => { stdout += String(chunk); if (bounded && stdout.length > 2 * 1024 * 1024) fail(); });
+    child.stderr.on("data", (chunk) => { stderr += String(chunk); if (bounded && stderr.length > 64 * 1024) fail(); });
+    child.once("error", (e) => { clearTimeout(timer); reject(e); });
+    child.once("close", (code) => { clearTimeout(timer); resolve({ code: code ?? -1, stdout, stderr }); });
   });
+}
+
+export async function readTemporalTerminal(config: TemporalBridgeConfig, missionId: string, sessionId: string) {
+  const described = await invoke(config, ["workflow", "describe", "--workflow-id", missionId, "-o", "json"], true);
+  if (described.code !== 0) throw new Error("Temporal terminal describe unavailable");
+  const info = JSON.parse(described.stdout).workflowExecutionInfo;
+  if (info?.taskQueue !== config.taskQueue || info?.type?.name !== "genericConstructorMissionWorkflow" || !info.closeTime) return null;
+  let result = null;
+  if (info.status === "WORKFLOW_EXECUTION_STATUS_COMPLETED") {
+    const response = await invoke(config, ["workflow", "result", "--workflow-id", missionId, "--run-id", info.execution.runId, "-o", "json"], true);
+    if (response.code !== 0) throw new Error("Temporal terminal result unavailable");
+    result = JSON.parse(response.stdout);
+  }
+  return terminalEmission(info, result, missionId, sessionId);
 }
 
 function workflowInfo(raw: string) {

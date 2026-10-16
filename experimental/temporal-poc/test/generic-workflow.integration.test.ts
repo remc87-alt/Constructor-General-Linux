@@ -138,6 +138,9 @@ test("permission blocks until an exact human decision; forged signals are ignore
   assert.equal(calls.reply.length, 1);
   assert.equal(calls.reply[0].decision, "once");
   assert.deepEqual(s.permissions_handled, ["per_1"]);
+  assert.equal(s.pending_permission, null);
+  assert.equal(s.permission_status, "none");
+  assert.equal(calls.abort, undefined, "an approved, validated mission is not aborted");
   await h.connection.close();
 });
 
@@ -188,6 +191,12 @@ test("an unanswered permission ends blocked at the deadline, aborts, never repli
   assert.equal(calls.reply, undefined);
   assert.equal(calls.abort.length, 1);
   assert.equal(s.pending_permission, null);
+  assert.equal(s.permission_status, "none");
+  assert.equal(calls.validate, undefined, "an unanswered permission cannot reach validation");
+  const history = await h.client.workflow.getHandle(id).fetchHistory();
+  const patch = history.events?.find((e) => e.markerRecordedEventAttributes?.markerName === "core_patch");
+  assert.ok(patch, "new executions record the containment patch marker");
+  await Worker.runReplayHistory({ workflowsPath: WORKFLOWS }, history, id);
   await h.connection.close();
 });
 
@@ -205,6 +214,8 @@ test("a rejected permission is replied once, then the mission stops and is abort
   assert.equal(s.functional_status, "blocked");
   assert.equal(calls.abort.length, 1);
   assert.equal(calls.validate, undefined);
+  assert.equal(s.pending_permission, null);
+  assert.equal(s.permission_status, "none");
   await h.connection.close();
 });
 
@@ -228,6 +239,8 @@ test("a failed abort is recorded and the mission still ends blocked (not failed)
   assert.equal(s.functional_status, "blocked");
   assert.equal(s.phase, "session_abort_failed");
   assert.equal(s.temporal_status, "completed");
+  assert.equal(s.pending_permission, null);
+  assert.equal(s.permission_status, "none");
   await h.connection.close();
 });
 
