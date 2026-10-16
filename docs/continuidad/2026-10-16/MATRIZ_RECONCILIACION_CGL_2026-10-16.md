@@ -5,7 +5,7 @@ Alcance exclusivo Constructor General Linux. La fuente «Ubuntu/Director» es ev
 | Hecho | Fuente | Fecha | Clasificación | Acción |
 |---|---|---|---|---|
 | Proyecto independiente; repo CGL | PROJECT.md, README.md, origin comprobado | 16/10/2026 | Confirmado | Excluir arquitectura/datos de otros proyectos |
-| HEAD local f981401, remoto 02902a1e | git rev-parse y git ls-remote durante GUARDA | 16/10/2026 | Confirmado | No afirmar sincronización; commit documental local aislado |
+| HEAD local previo f981401 y remoto previo 02902a1e | Git durante el guardado inicial | 16/10/2026 | Histórico | Estado anterior a 47a26b3 y a la integración; no usar como HEAD actual |
 | Puente principal y misma sesión | Checkpoint 06/10 y smoke 12/10 | 06–12/10/2026 | Histórico | Conservar PASS, no repetir |
 | Auxiliar publica ocho herramientas | CGL-02 initialize/tools/list | 16/10/2026 | Histórico, PASS local | No confundir con aceptación E2E |
 | Solo cuatro herramientas visibles | GUARDA remoto 02902a1e, CGL-01/02 | 16/10, anterior a nuevo complemento | Histórico superado | No mantenerlo como bloqueo vigente |
@@ -29,3 +29,12 @@ Alcance exclusivo Constructor General Linux. La fuente «Ubuntu/Director» es ev
 | Misión accidental start_mission | Referencias previas sin identidad suficiente | 16/10/2026 | Pendiente de identificación | No intervenir ni confundir con run Temporal |
 | Borrador externo dice conector pendiente | GUARDA_PENDIENTE.md, inspeccionado | 16/10/2026 | Histórico superado | No sobrescribir; este GUARDA prevalece |
 | Publicaciones previas rechazadas | Herramienta GitHub: approval required, policy never | 16/10/2026 | Confirmado por respuestas previas | Preservar local; no eludir controles |
+
+## Integración documental posterior del mismo día
+
+| Hecho | Fuente | Fecha | Clasificación | Acción |
+|---|---|---|---|---|
+| Divergencia 47a26b3 frente a e216613/02902a1; base f981401 | Git inspeccionado antes del merge | 16/10/2026 | Confirmado | Conservar ambas líneas y sus contenidos históricos mediante merge autorizado |
+| Conflicto add/add solo en GUARDA | Git merge --no-commit | 16/10/2026 | Confirmado | Estado reconciliado como vigente; remotos íntegros en sus commits, sin reactivar pendientes superados |
+| INICIA/GUARDA vigentes y procedimiento simplificado | GUARDA §10.1 e INICIA | 16/10/2026 | Documentado | Fetch/preservación/divergencia antes de guardar; publicar y verificar SHA |
+| Publicación de integración | Comparación Git posterior | 16/10/2026 | Pendiente hasta igualdad de SHA | Informe final con error o confirmación; no declarar PASS por commit local |

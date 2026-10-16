@@ -157,26 +157,33 @@ Las pruebas de generic-workflow.integration.test.ts usan workflow real y activid
 - Mantener permisos por decisión puntual; no aprobar ejecución generada bajo supuestos de aislamiento no demostrados. El cierre de G01 operativo requiere decisión basada en la ruta que se elija, no reabrir su diseño histórico indiscriminadamente.
 - No incorporar secretos, SQLite, sesiones, outbox, workspaces ni suites privadas al commit documental.
 
-## 10. Estado Git y persistencia
+## 10. Integración Git y antecedentes conservados
 
-Comprobado al iniciar este guardado:
-- Origin: https://github.com/remc87-alt/Constructor-General-Linux.git
-- Rama: m03-g5-consolidation-20261008.
-- HEAD local previo: f98140129675e0f0f139e82ff196d4c83aa5f081.
-- HEAD remoto consultado por git ls-remote: 02902a1e44536053a946bd3d0fd9dd21144d9866.
-- No afirmar sincronización. La referencia origin local puede estar desactualizada.
-- Árbol rastreado limpio antes del guardado.
-- Sin seguimiento preexistentes, no añadir ni borrar:
-  docs/G01_BWRAP_CIERRE_2026-10-12.md y resultado.json.
-- Borrador externo inspeccionado y preservado:
-  /home/rodrigo_mella/.local/state/cgl-temporal-publicacion/GUARDA_PENDIENTE.md.
-  Sus pendientes de publicación son históricos y superados por la confirmación posterior del Director.
-- Intentos anteriores de escritura por herramienta GitHub rechazados: exigencia de aprobación con política never.
-- Este guardado genera un commit documental local sobre la base local existente, sin merge ni sincronización masiva.
-- Identificar el commit documental efectivo con git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md. No insertar un hash autorreferente.
-- **Estado de respaldo: LOCAL; publicación de esta consolidación no confirmada.** Un commit local no acredita respaldo remoto. Ante otro rechazo no intentar otro transporte para eludir el control.
-- El informe final de esta misión debe indicar el hash local resultante, el remoto verificado y el rechazo/resultado de publicación.
-- Resultado del intento de publicación de esta consolidación: herramienta GitHub update_file rechazada con «MCP tool call requires approval, but approval policy is never». No se publicó este contenido, ni INICIA ni matriz; no se intentó git push u otro transporte alternativo. El commit documental local contiene el guardado; su hash efectivo se obtiene con el comando anterior y figura en el informe final.
+- Rama canónica: m03-g5-consolidation-20261008, origin https://github.com/remc87-alt/Constructor-General-Linux.git.
+- Base común: f98140129675e0f0f139e82ff196d4c83aa5f081.
+- Commit local de continuidad preservado: 47a26b3da909f304def391919e583c40dc5781cf (tres documentos).
+- Línea remota comprobada antes de integrar: e216613 → 02902a1e44536053a946bd3d0fd9dd21144d9866.
+- e216613 conserva el diagnóstico inicial del 16/10: perfil multicanal, observaciones del túnel y límites de publicación.
+- 02902a1 conserva la adición CGL-01/CGL-02, matriz C01–C12, reglas INICIA/GUARDA y camino crítico de ese momento.
+- Ambas versiones remotas permanecen íntegras en sus commits, accesibles con git show <commit>:docs/continuidad/2026-10-16/GUARDA_DIAGNOSTICO_CGL_2026-10-16.md. Son antecedentes históricos; no volver a ejecutar sus instrucciones superadas.
+- Integración autorizada mediante merge de ambas líneas, sin rebase, reset, force push ni ramas permanentes adicionales. Los tres commits originales se conservan como ancestros.
+- Conflicto único add/add en este GUARDA. Resolución explícita: estado reconciliado local como referencia operativa, referencias a los antecedentes remotos y metodología incorporadas en este documento. No se aplicó una selección automática ours/theirs ni se descartaron commits.
+- El commit efectivo de la integración se obtiene con git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md; el informe final registra los SHA local/remoto comprobados.
+- No añadir ni borrar los dos archivos sin seguimiento preexistentes: docs/G01_BWRAP_CIERRE_2026-10-12.md y resultado.json.
+- Borrador externo ~/.local/state/cgl-temporal-publicacion/GUARDA_PENDIENTE.md inspeccionado previamente y preservado; sus pendientes antiguos están superados por este GUARDA.
+- Intentos anteriores mediante GitHub update_file fueron rechazados: aprobación requerida, política never. Eso describe el intento anterior, no el resultado de una publicación Git posterior.
+- Publicación de esta integración: se determina comparando el HEAD local con git ls-remote origin refs/heads/m03-g5-consolidation-20261008 después del intento permitido. No declarar respaldo remoto o PASS por la mera existencia del commit local. Ante rechazo, conservar el commit y detenerse, sin intentar otro transporte o credencial.
+
+## 10.1 Procedimiento GUARDA simplificado para futuras sesiones
+
+1. Comprobar repositorio, rama, estado local y actualizar la referencia remota mediante git fetch de la rama canónica. Esto no modifica archivos de trabajo. Comparar HEAD, referencia remota actualizada y ancestro común antes de editar continuidad.
+2. Preservar cualquier cambio local antes de integrar: revisar diff y preparar un commit selectivo autorizado, o detenerse si no está clara su pertenencia. No incluir secretos ni archivos sin seguimiento automáticamente; no resetear ni borrar para limpiar el árbol.
+3. Detectar divergencia con git rev-list --left-right --count HEAD...origin/m03-g5-consolidation-20261008. Integrar primero la historia necesaria con autorización. Revisar conflictos manualmente; evidencia reciente verificada prevalece y antecedentes quedan en Git. Detenerse si la resolución es ambigua.
+4. Mantener un único GUARDA vigente y un único INICIA vigente: los paths de este directorio. La matriz existente es apoyo. Versiones anteriores quedan en el historial, sin crear sistemas paralelos. El INICIA identifica ruta, rama, estado, pendientes reales y DO_NOT_REPEAT.
+5. Revisar diff documental, referencias, coherencia de fechas y ausencia de secretos; confirmar que no se incluye código funcional. Crear un solo commit documental por guardado cuando sea posible; una integración de historiales puede requerir un merge.
+6. Publicar inmediatamente por el mecanismo Git autorizado a la rama canónica, sin force y usando únicamente las credenciales existentes. Solicitar aprobación cuando el mecanismo la requiera; no cambiar políticas o credenciales para evitarla.
+7. Consultar la rama remota con git ls-remote y exigir igualdad con el HEAD local. Solo entonces declarar PASS de guardado/publicación; esto nunca equivale a PASS del MVP.
+8. Si falla, informar el error exacto, los SHA local/remoto y la aprobación o reconciliación necesaria. Conservar el commit local y no repetir intentos idénticos ni eludir controles.
 
 ## 11. Pendientes reales y única reanudación
 

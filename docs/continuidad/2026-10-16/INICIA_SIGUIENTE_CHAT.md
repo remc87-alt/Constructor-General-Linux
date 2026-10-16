@@ -12,11 +12,11 @@ Leer primero, completos:
 2. docs/continuidad/2026-10-16/MATRIZ_RECONCILIACION_CGL_2026-10-16.md
 3. Este INICIA.
 
-Base local antes de guardar: f98140129675e0f0f139e82ff196d4c83aa5f081.
-Remoto verificado antes de guardar: 02902a1e44536053a946bd3d0fd9dd21144d9866.
-Commit efectivo de esta continuidad: el que incorpora este INICIA; consultar git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md.
-Publicación de la consolidación: no confirmada; guardado local no equivale a respaldo GitHub. No reemplazar el contenido local por el GUARDA remoto antiguo. Si solo se recupera GitHub en 02902a1e, falta esta consolidación y debe recuperarse el commit local del informe final.
-El intento de publicación de esta misión fue rechazado por la herramienta GitHub: requiere aprobación y la política es never. No se intentó eludir ese control. GUARDA, INICIA y matriz permanecen locales.
+## Historia y sincronización
+
+Base común f98140129675e0f0f139e82ff196d4c83aa5f081. Guardado local original 47a26b3da909f304def391919e583c40dc5781cf; antecedentes remotos e216613 y 02902a1e44536053a946bd3d0fd9dd21144d9866. La integración conserva esas líneas mediante merge; el GUARDA vigente resuelve el único conflicto documental con evidencia posterior del 16/10.
+Commit efectivo: git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md. Comparar HEAD con git ls-remote de la rama para conocer el estado real de publicación. No usar un rechazo anterior de update_file para afirmar el resultado de un intento Git posterior ni dar por publicado un commit solo local.
+Antes de otro guardado: seguir el procedimiento simplificado del GUARDA §10.1: fetch, preservar cambios, detectar/integrar divergencia antes de editar, un commit documental cuando sea posible, publicar y verificar igualdad de SHA. No reemplazar este documento por una versión histórica ni sincronizar indiscriminadamente.
 
 ## Estado y cinco hechos de reenganche
 
@@ -44,7 +44,7 @@ No reanudar/cancelar/repetir ese run ni intervenir la misión accidental distint
 - No crear/modificar workspaces históricos ni borrar salidas.
 - No añadir/borrar docs/G01_BWRAP_CIERRE_2026-10-12.md o resultado.json.
 - Preservar el borrador externo ~/.local/state/cgl-temporal-publicacion/GUARDA_PENDIENTE.md sin tomar sus pendientes antiguos como estado vigente.
-- No sincronizar indiscriminadamente, fusionar ramas ni publicar secretos.
+- No sincronizar indiscriminadamente ni publicar secretos. Una integración de historias exige autorización y el procedimiento del GUARDA §10.1.
 
 ## Próxima misión, separada de este guardado
 
@@ -57,4 +57,4 @@ MCP Events → ChatGPT permanece pendiente y se aborda después de la ejecución
 
 ## Prompt breve
 
-Continúa Constructor General Linux en m03-g5-consolidation-20261008. Lee el GUARDA, matriz e INICIA del 16/10 reconciliados, priorizando la copia local si GitHub conserva 02902a1e. Túnel/herramientas, raíces heredadas e identidad/cwd OpenCode ya están comprobados: no repetirlos. Ejecuta solo la inspección focalizada inicial de CGL-E2E-PRIMERA-ACEPTACION para decidir si el flujo histórico admite la prueba sin otro workspace; si no, justifica la preparación y asociación con OpenCode. No inicies misiones ni cambies servicios/workspaces sin la autorización correspondiente.
+Continúa Constructor General Linux en m03-g5-consolidation-20261008. Lee el GUARDA, matriz e INICIA vigentes del 16/10; compara Git local/remoto y conserva el historial integrado. Túnel/herramientas, raíces heredadas e identidad/cwd OpenCode ya están comprobados: no repetirlos. Ejecuta solo la inspección focalizada inicial de CGL-E2E-PRIMERA-ACEPTACION para decidir si el flujo histórico admite la prueba sin otro workspace; si no, justifica la preparación y asociación con OpenCode. No inicies misiones ni cambies servicios/workspaces sin la autorización correspondiente.
