@@ -11,7 +11,7 @@ import { type GenericMissionContract, validateGenericMissionContract, workspaceA
 import { parsePublicOracleResult, publicOracleResultPath, validateOracleExecutionIdentity } from "./oracle-result-contract.ts";
 import { checkpointDue, checkpointFromObservation, type MissionCheckpoint } from "./mission-checkpoint.ts";
 import { authorizedOracleSuite } from "./oracle-registry.ts";
-import { openCodePolicyViolations } from "./opencode-policy.ts";
+import { isolatedMode, openCodePolicyViolations } from "./opencode-policy.ts";
 import { expectedExecutor, gitWorkspaceViolation, ISOLATED_WORKSPACE_ROOT, verifyServerIdentity, workspaceConfigViolation, workspaceRoot } from "./workspace.ts";
 
 // G04: every external effect re-checks the absolute mission deadline, so a
@@ -131,7 +131,7 @@ export async function prepareGenericMission(input: { contract: unknown }) {
   if (workspaceViolation) throw ApplicationFailure.nonRetryable(`generic contract: workspace rejected: ${workspaceViolation}`);
   let config: unknown;
   try { config = JSON.parse(fs.readFileSync(configPath, "utf8")); } catch { throw ApplicationFailure.nonRetryable("generic contract: opencode.json unreadable"); }
-  const violations = openCodePolicyViolations(config, contract.artifactPaths);
+  const violations = openCodePolicyViolations(config, contract.artifactPaths, isolatedMode());
   if (violations.length) throw ApplicationFailure.nonRetryable(`generic contract: permission policy rejected: ${violations.join("; ")}`);
   const stale = workspaceArtifactsAreFresh(contract);
   if (stale.length) throw ApplicationFailure.nonRetryable(`generic contract: stale artifacts: ${stale.join(",")}`);

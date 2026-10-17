@@ -129,7 +129,7 @@ export function createMissionWorkspace(missionId: string, artifactPaths: string[
   try {
     fs.chmodSync(ws, isolated ? 0o3770 : 0o700);
     const fd = fs.openSync(path.join(ws, "opencode.json"), fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
-    try { fs.writeSync(fd, JSON.stringify(missionOpenCodeConfig(artifactPaths), null, 2) + "\n"); fs.fchmodSync(fd, isolated ? 0o644 : 0o600); } finally { fs.closeSync(fd); }
+    try { fs.writeSync(fd, JSON.stringify(missionOpenCodeConfig(artifactPaths, isolated), null, 2) + "\n"); fs.fchmodSync(fd, isolated ? 0o644 : 0o600); } finally { fs.closeSync(fd); }
     ensureGitWorkspace(ws, gitBin);
     const violation = workspaceConfigViolation(ws);
     if (violation) fail(violation);
