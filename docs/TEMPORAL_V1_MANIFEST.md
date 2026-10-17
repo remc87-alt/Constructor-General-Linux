@@ -266,3 +266,19 @@ Mitigaciones que requieren sudo, por prioridad:
   - Pruebas: `test:validation` 87/87 con Temporal efímero 7263; adaptador 76/76 (`typecheck` OK); oráculo PASS; lanzador 54/54; mutaciones 25/25.
 - **Modo legado:** es el predeterminado si no se definen `CGL_WORKSPACE_ROOT` ni `CGL_OPENCODE_USER`. Con los wrappers nuevos instalados, el oráculo solo acepta `/srv/cgl/workspaces`.
 - **Procedimiento vigente:** `docs/G01_AISLAMIENTO_PROCEDIMIENTO.md` §7.
+
+
+## Addendum 2026-10-17 · continuidad de misiones MVP
+
+El checkpoint operativo y la evidencia fechada se registran en
+`docs/CONTINUIDAD_2026-10-17.md`. En síntesis: rollback compatible A06 PASS
+(3/3 traspasos, 2/2 adaptador congelado); worker `ff83339` con preflight 8/8;
+misión 001 abortada por rechazo de `ls -la`; misión 002 llegó al oráculo y
+terminó `FUNCTIONAL_FAILURE`, con reparación limitada por 15 minutos. A01/A03
+PASS, A02/A04 PARCIAL y A07 PENDIENTE.
+
+La causa identificada es la falta de especificación de interfaz en las
+instrucciones del contrato frente a `csv-expense-v1`. Siguiente acción:
+especificar la interfaz en el contrato sin revelar pruebas privadas y ejecutar
+misión 003. La autoaprobación de lecturas/tests queda como mejora posterior al
+MVP y condicionada a aislamiento G01 activo.

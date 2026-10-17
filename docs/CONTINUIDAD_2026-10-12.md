@@ -1,5 +1,7 @@
 # Constructor General Linux V2 · Continuidad e INICIA · 2026-10-12
 
+> **Continuidad vigente (2026-10-17):** [GUARDA CGL · 2026-10-17](CONTINUIDAD_2026-10-17.md). Este checkpoint complementa el registro histórico y prevalece para los hechos de su fecha.
+
 Punto de entrada para un Director o una sesión nueva. Complementa, sin reemplazar, la cadena canónica:
 
 1. `JORNADA_2026-10-06_CHECKPOINT_DIRECTOR_CONSTRUCTOR.md`
