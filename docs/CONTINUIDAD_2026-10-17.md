@@ -50,3 +50,18 @@ Mejoras posteriores al MVP:
 3. Plantilla de contrato que incluya la especificación de interfaz.
 
 El GO es para **uso supervisado**. No hacer merge a `main`: queda como decisión separada del usuario.
+
+
+## Cierre post-MVP y continuidad operativa · 2026-10-17
+
+Este checkpoint complementa el PASS supervisado de arriba y prevalece para la operación posterior al MVP.
+
+- **Ramas/publicación:** `main` avanzó por fast-forward desde `f12bcfc75c2c17813812a967e575cf35e38352e6` al commit `c4ef1c9d2cf4e402582c268ea8099b56de07d5c9`, igualando `m03-g5-consolidation-20261008`. Ese commit añadió la plantilla `docs/PLANTILLA_CONTRATO_MISION.md` y `experimental/temporal-poc/cgl-prep-mission.sh` (modo ejecutable 755). El script se invoca como `cgl-prep-mission.sh <mission_id> <artefactos...>`; crea el workspace, reapunta OpenCode :4098 y ejecuta preflight.
+- **Runtime vigente:** Worker PID `2316340`, código `ff83339`. Servicio systemd `cgl-temporal-publicacion` activo, túnel oficial `tunnel_…8600`; adaptador con `MCP_MISSION_MAP_FILE` compartido, `MCP_TEMPORAL_RESULTS=on` y `MCP_EVENTS_EMITTER=on`. Respaldo: `start-temporal-adapter.sh.bak-20261017-162136`.
+- **Túnel de laboratorio:** `opencode-temporal-lab` (`tunnel_…a5ed`, adaptador anterior `opencode-constructor-e2e`) detenido el 17/10; validado sin dependencias en otros proyectos. Queda un solo túnel. Relanzarlo solo si se necesita: `tunnel-client run --profile opencode-temporal-lab --control-plane.poll-channel main --control-plane.poll-channel temporal`. Recomendación: eliminar en ChatGPT el conector viejo de OpenCode.
+- **Servicios ajenos a CGL: no tocar:** `hermes-gateway`, `openviking-empresa-ia`, `n8n`, OpenCode 4096 y 4097.
+- **Procedimiento validado:** ejecutar `cgl-prep-mission.sh` → llamar `start_temporal_mission` con contrato de la plantilla (interfaz exacta y ejemplos) → aplicar la regla de permisos delegada (no rechazar; un reject aborta) → consultar `get_temporal_mission` hasta fase `validated`.
+- **Pendientes:** (a) activar aislamiento G01 y después evaluar lista blanca de autoaprobación; (b) registrar un oráculo propio antes de cada nuevo tipo de tarea; (c) opcional, revisar el posible n8n duplicado (dos procesos, solo uno escucha).
+- **Nota de operación:** la terminal de Rodrigo puede cortar pegados largos de varias líneas. Para cambios grandes, el Director publica en GitHub y Rodrigo sincroniza con `git pull --ff-only`.
+
+**Próximo chat:** usar la sección post-MVP del INICIA vigente. No repetir las misiones 003/004 ni el preflight ya demostrado; continuar solo con los pendientes anteriores, sin tocar servicios de otros proyectos.

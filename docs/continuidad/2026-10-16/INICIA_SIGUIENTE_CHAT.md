@@ -54,3 +54,18 @@ No tocar Empresa IA/PMO/COVAL, 4096/4097, túneles, Temporal, OpenCode, credenci
 ## Prompt de reenganche
 
 Continúa Constructor General Linux como herramienta de desarrollo supervisada desde ChatGPT, sin exigir autonomía absoluta. Lee primero la adenda definitiva §13 del GUARDA y la matriz A01–A07; Events automático y reconstrucción binaria exacta no son requisitos MVP. Rama m03-g5-consolidation-20261008, MVP PARCIAL, Worker sin actualizar, rollback compatible/manual PARCIAL. El siguiente paso exclusivo es revisar/ejecutar en Ubuntu verify-compatible-rollback.sh del snapshot privado, conservar resultados y verificar verified-fallback.json; si falla, diagnosticar solo ese fallo. No repetir PASS, contención ni auditorías, no desplegar, no modelos ni E2E. Después devuelve el gate al Director.
+
+
+## INICIA vigente · cierre post-MVP · 2026-10-17
+
+Esta sección prevalece sobre instrucciones y estados anteriores de este INICIA que hayan quedado desactualizados. Leer también [GUARDA CGL 2026-10-17](../../../../CONTINUIDAD_2026-10-17.md).
+
+- **Ramas:** `m03-g5-consolidation-20261008` y `main` apuntaban al mismo commit `c4ef1c9d2cf4e402582c268ea8099b56de07d5c9`; `main` avanzó por fast-forward desde `f12bcfc75c2c17813812a967e575cf35e38352e6`. Ese commit añadió `docs/PLANTILLA_CONTRATO_MISION.md` y el script ejecutable `experimental/temporal-poc/cgl-prep-mission.sh`. El script recibe `<mission_id> <artefactos...>`, prepara el workspace, reapunta OpenCode :4098 y corre preflight.
+- **MVP supervisado:** PASS, misiones 003/004 validadas por `expense-oracle-001`, repetibilidad 2/2; A01–A07 PASS. No repetirlas salvo cambio relevante que invalide la evidencia.
+- **Runtime reportado:** servicio systemd `cgl-temporal-publicacion` activo en túnel oficial `tunnel_…8600`; Worker PID `2316340`, código `ff83339`. Adaptador con mapa compartido `MCP_MISSION_MAP_FILE`, resultados Temporal y Events activados. Respaldo `start-temporal-adapter.sh.bak-20261017-162136`.
+- **Túnel laboratorio detenido:** `opencode-temporal-lab`, `tunnel_…a5ed`, adaptador viejo `opencode-constructor-e2e`; se validó que no depende de otros proyectos. Queda un solo túnel. Si hace falta: `tunnel-client run --profile opencode-temporal-lab --control-plane.poll-channel main --control-plane.poll-channel temporal`. Recomendar retirar el conector viejo de OpenCode de ChatGPT.
+- **No tocar:** `hermes-gateway`, `openviking-empresa-ia`, `n8n`, OpenCode 4096 ni 4097. Pendientes CGL: primero aislamiento G01 y luego evaluar lista blanca; crear oráculo antes de abordar otro tipo de tarea; revisión de n8n duplicado es opcional.
+- **Flujo de una misión nueva:** `cgl-prep-mission.sh <mission_id> <artefactos...>` → `start_temporal_mission` con interfaz exacta, ejemplos y oráculo autorizado → permisos delegados sin rechazar (reject aborta) → `get_temporal_mission` hasta `validated`.
+- **Terminal:** puede cortar pegados largos. Cambios grandes se publican en GitHub; Rodrigo sincroniza con `git pull --ff-only`.
+
+Retomar desde los pendientes post-MVP; no cambiar ni reiniciar servicios sin autorización y respetar el alcance supervisado.
