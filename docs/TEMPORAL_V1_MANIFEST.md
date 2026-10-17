@@ -282,3 +282,25 @@ instrucciones del contrato frente a `csv-expense-v1`. Siguiente acción:
 especificar la interfaz en el contrato sin revelar pruebas privadas y ejecutar
 misión 003. La autoaprobación de lecturas/tests queda como mejora posterior al
 MVP y condicionada a aislamiento G01 activo.
+
+
+## Addendum 2026-10-17 · aceptación MVP supervisado
+
+El estado vigente de aceptación está en `docs/CONTINUIDAD_2026-10-17.md`,
+sección “Cierre del MVP supervisado”. **MVP supervisado PASS; GO para uso
+supervisado**, con misiones 003 y 004 en `validated`, ambas aceptadas por
+`expense-oracle-001` sin diagnósticos; repetibilidad 2/2. La matriz A01–A07
+queda PASS para este gate. A03 usó decisiones manuales `once` del Director
+bajo autorización explícita del usuario; no hubo aprobación automática del
+sistema. A06 rollback compatible PASS (3/3 traspasos, 2/2 adaptador congelado).
+
+La causa funcional de los fallos 001/002 se resolvió especificando en el
+contrato la interfaz requerida por `csv-expense-v1`, sin divulgar sus pruebas.
+La misión 001 abortó por un `reject` del supervisor. La misión 004 incluyó una
+edición de `README.md` autorizada por el Director fuera de la regla explícita,
+sin impacto, como aprendizaje para una futura política de permisos.
+
+Mejoras no MVP: lista blanca de autoaprobación únicamente tras activar
+aislamiento G01; retorno automático MCP Events; plantilla de contrato con
+especificación de interfaz. Gate de despliegue: uso supervisado autorizado;
+no fusionar a `main` hasta una decisión aparte del usuario.
