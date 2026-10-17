@@ -146,3 +146,45 @@ No publicar snapshots, node_modules, binarios, estados de misión, callbacks/sec
 
 Fetch de referencia remota → preservar/revisar cambios y excluir privados → detectar divergencia → commits acotados (código preparado y documentación) → push normal únicamente a rama autorizada → comparar SHA local/remoto y leer documentos desde la referencia remota. Sin force, merge automático, main ni credenciales alternativas. Si falla, conservar commits locales y reportar el error; no declarar GUARDA PASS.
 INICIA debe recuperar objetivo, arquitectura, estado real, evidencias, cambios, riesgos, decisiones, próxima acción, restricciones y DO_NOT_REPEAT leyendo exclusivamente los documentos publicados. La simulación es documental: no ejecuta scripts, pruebas ni servicios. La verificación remota y sus commits se informan al finalizar este guardado.
+
+## 13. ADENDA DEFINITIVA DE ALCANCE — CGL-MVP-ALCANCE-DEFINITIVO-20261016
+
+Decisión expresa del usuario, formalizada por orden del Director el 16/10/2026.
+**Objetivo definitivo: una herramienta de desarrollo funcional, confiable y supervisada desde ChatGPT. No se exige autonomía absoluta.** El usuario encarga tareas, supervisa, autoriza lo sensible, interviene cuando hace falta, recupera resultados y continúa sin perder avances. La utilidad real para desarrollar es la medida de éxito.
+
+### Precedencia y conservación del checkpoint
+
+Esta adenda prevalece sobre cualquier interpretación anterior que exija autonomía total o retorno automático para aceptar el MVP. Complementa, sin reescribir, el GUARDA publicado en `4021ffa4a7eca636c1171fad0b544a7609505c61`. Las secciones 2, 7 y 8 anteriores conservan hechos y planes históricos; sus exigencias de MCP Events como condición obligatoria quedan sustituidas por esta adenda. Ningún PASS histórico se invalida por cambiar el alcance. Temporal permanece en la arquitectura; no se autoriza eliminarlo ni rediseñar la solución.
+
+Ruta obligatoria del MVP supervisado: ChatGPT Director → herramientas MCP disponibles → Temporal/Worker de la arquitectura actual → OpenCode → FreeLLMAPI → resultados verificables → consulta manual del Director y continuación de la misma misión. El oráculo existente se conserva como mecanismo de verificación del contrato de prueba elegido. MCP Events puede complementar la consulta; su recepción automática no es requisito de cierre.
+
+### Siete criterios obligatorios de aceptación
+
+1. **A01 — Encargo real:** ChatGPT Director envía una misión real a Constructor Linux mediante las herramientas disponibles.
+2. **A02 — Desarrollo verificable:** OpenCode ejecuta una tarea de desarrollo y produce resultados verificables.
+3. **A03 — Permisos humanos:** los permisos sensibles requieren autorización humana explícita; no hay aprobaciones automáticas de las solicitudes de permiso. La intervención humana es parte del producto, no un fallo de autonomía.
+4. **A04 — Supervisión y continuidad:** el Director consulta estado, recupera resultados y continúa la misma misión conservando identidad y contexto.
+5. **A05 — Continuidad en GitHub:** trabajo y decisiones se preservan y recuperan mediante INICIA/GUARDA publicados.
+6. **A06 — Recuperación segura:** existe una vía segura, documentada y verificable de recuperación ante fallos; puede requerir intervención manual. No exige reconstrucción binaria exacta de Workers históricos.
+7. **A07 — Ciclo repetible:** el ciclo completo supervisado funciona de forma repetible y tiene evidencia de aceptación. Una misión real aceptada y la evidencia de continuidad/repetibilidad deben respaldarlo; no exigir otra ejecución si la evidencia válida ya cubre el comportamiento.
+
+No declarar MVP PASS hasta ejecutar y validar una misión real supervisada que acredite estos criterios. El E2E bloqueado por permiso conserva su evidencia parcial; no pasa a ser éxito funcional por esta decisión. Los PASS unitarios/integración no sustituyen aceptación E2E.
+
+### Gobierno y clasificación de hallazgos
+
+- No cambiar objetivos sin autorización del usuario. Registrar autor, fecha, decisión y evidencia en la continuidad.
+- No repetir pruebas PASS salvo cambio relevante que invalide su evidencia; documentar qué cambió y qué prueba concreta necesita repetirse.
+- Clasificar cada hallazgo como **BLOQUEANTE MVP** o **MEJORA POSTERIOR**, con criterio A01–A07 afectado y justificación. No convertir una mejora posterior en gate obligatorio.
+- Una recuperación manual segura satisface A06 si está demostrada. Mantener el NO-GO del despliegue mientras falte su verificación; esta adenda no autoriza reinicios ni reduce la seguridad.
+- Registrar por separado código preparado, runtime desplegado, pruebas simuladas y aceptación real. Preservar identidad/contexto y trazabilidad entre conversaciones.
+
+### Hoja de ruta vigente
+
+**Antes de aceptar el MVP supervisado:** verificar recuperación compatible/manual; revisar el gate y autorizar la actualización coherente necesaria; preparar una misión de desarrollo con verificación adecuada y permiso humano disponible; ejecutar una única misión real supervisada autorizada; recuperar estado/resultado y demostrar continuidad de la misma misión; registrar aceptación y repetibilidad en GitHub. Reutilizar evidencia cerrada y componentes existentes.
+
+**MEJORA POSTERIOR — no bloquea el MVP por sí sola:** retorno automático MCP Events, recuperación completamente autónoma, memoria autónoma avanzada, reconstrucción binaria exacta de Workers históricos y resiliencia ante todos los escenarios. Los avances y pruebas existentes de Events y rollback se preservan; no se eliminan ni se descartan. Nuevas plataformas o infraestructura no son necesarias para aceptar el MVP actual y requerirían justificación/autorización separadas. Las autorizaciones automáticas no están autorizadas por esta hoja de ruta: cualquier propuesta futura requeriría una nueva decisión explícita del usuario.
+
+### Estado y siguiente acción
+
+MVP sigue **PARCIAL**: no hay misión de desarrollo integral aceptada. Despliegue sigue **NO-GO** por la recuperación compatible pendiente, no por falta de autonomía o recepción de MCP Events. Consultar la matriz A01–A07 vigente en MATRIZ_RECONCILIACION_CGL_2026-10-16.md.
+Próxima acción técnica previamente preparada: verificar en Ubuntu el fallback compatible con `verify-compatible-rollback.sh`, conservar logs y revisar `verified-fallback.json`; si falla, diagnosticar solo ese fallo. Esa prueba puede demostrar la vía manual de A06; no requiere equivalencia binaria con el Worker antiguo. Después devolver el gate al Director. Esta misión solo publica alcance y no ejecuta esa acción.

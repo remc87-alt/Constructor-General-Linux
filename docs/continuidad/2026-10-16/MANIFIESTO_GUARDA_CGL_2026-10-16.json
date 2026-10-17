@@ -155,5 +155,39 @@
     "rollback/cross-version.test.mjs": "fdd67c52df5102b0f590f7fdf372c18c6d5324cbaf2d65fa8710dc9d1a4afa23",
     "rollback/ROLLBACK_PROCEDURE.md": "0ab855b5a98d42b8bff94dc23d4cbf8fb6b8242e35b5fa0e3bbeea5a6bff3b2a",
     "rollback/verify-compatible-rollback.sh": "a84f0eabaf074199f40c05d56bf4198cb6f033c194ca5840a7708ec1305d8a87"
+  },
+  "scope_decision": {
+    "mission": "CGL-MVP-ALCANCE-DEFINITIVO-20261016",
+    "date": "2026-10-16",
+    "authority": "Decisión expresa del usuario; orden del Director",
+    "previous_published_checkpoint": "4021ffa4a7eca636c1171fad0b544a7609505c61",
+    "definition": "Herramienta de desarrollo funcional, confiable y supervisada desde ChatGPT; no exige autonomía absoluta",
+    "canonical_adendum": "GUARDA_DIAGNOSTICO_CGL_2026-10-16.md#13-adenda-definitiva-de-alcance--cgl-mvp-alcance-definitivo-20261016",
+    "acceptance_matrix": "MATRIZ_RECONCILIACION_CGL_2026-10-16.md",
+    "required_criteria": [
+      "A01 encargo real desde ChatGPT",
+      "A02 desarrollo con resultados verificables",
+      "A03 autorización humana explícita para permisos sensibles",
+      "A04 consulta/resultado/continuación con misma identidad y contexto",
+      "A05 INICIA/GUARDA en GitHub",
+      "A06 recuperación segura documentada incluso manual",
+      "A07 ciclo supervisado repetible y evidencia de aceptación"
+    ],
+    "optional_after_mvp": [
+      "MCP Events automático",
+      "Recuperación completamente autónoma",
+      "Memoria autónoma avanzada",
+      "Reconstrucción binaria exacta de Workers históricos",
+      "Resiliencia total",
+      "Nuevas plataformas/infraestructura"
+    ],
+    "automatic_sensitive_permission_approval": "No autorizada; requiere nueva decisión expresa del usuario para cualquier cambio de alcance",
+    "temporal": "Se conserva en la arquitectura actual",
+    "change_governance": "Solo con autorización del usuario; clasificar hallazgos BLOQUEANTE MVP o MEJORA POSTERIOR con justificación",
+    "tests": "No repetir PASS salvo cambio relevante que invalide la evidencia; unitarias no equivalen a E2E",
+    "mvp_pass_gate": "Misión real supervisada validada más evidencia de A01–A07",
+    "deployment_gate_unchanged": "NO-GO hasta validar recuperación compatible segura y demás controles aplicables; Events y equivalencia binaria no son bloqueos por sí solos",
+    "next_action_unchanged": "bash /home/rodrigo_mella/.local/state/cgl-temporal-publicacion/rollback-compatible-20261016/verify-compatible-rollback.sh",
+    "recorded_at_utc": "2026-10-17T00:04:38.570452+00:00"
   }
 }
