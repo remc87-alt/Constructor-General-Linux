@@ -1,0 +1,77 @@
+## usuarios/grupos
+uid=995(cgl_exec) gid=986(cgl_exec) groups=986(cgl_exec),1001(cgl_ws)
+uid=997(cgl_oracle) gid=987(cgl_oracle) groups=987(cgl_oracle)
+cgl_ws:x:1001:cgl_exec,rodrigo_mella
+uid=1000(rodrigo_mella) gid=1000(rodrigo_mella) groups=1000(rodrigo_mella),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),100(users),989(docker),988(empresa-ia-capa0),1001(cgl_ws)
+## /srv/cgl
+755 root:root /srv/cgl
+2750 rodrigo_mella:cgl_ws /srv/cgl/workspaces
+## var/lib/cgl-exec
+750 root:cgl_exec /var/lib/cgl-exec
+stat: cannot statx '/var/lib/cgl-exec/opencode': Permission denied
+stat: cannot statx '/var/lib/cgl-exec/opencode/config/opencode/opencode.jsonc': Permission denied
+stat: cannot statx '/var/lib/cgl-exec/opencode/cache': Permission denied
+## binarios
+755 root:root /usr/local/lib/cgl-exec
+755 root:root /usr/local/lib/cgl-exec/opencode
+755 root:root /usr/local/libexec/cgl-exec-opencode
+755 root:root /usr/local/sbin/cgl-exec-netfilter
+750 root:root /usr/local/libexec/cgl-oracle-prepare
+755 root:root /usr/local/libexec/cgl-oracle-validate
+stat: cannot statx '/usr/local/libexec/*bak-g01': No such file or directory
+## sudoers
+total 20
+-r--r----- 1 root root 1068 Jan 29  2024 README
+-r--r----- 1 root root  483 Oct 12 18:18 cgl-exec
+-r--r----- 1 root root  408 Oct  9 15:42 cgl-oracle
+-r--r----- 1 root root  258 Oct  9 15:42 cgl-oracle.bak-20261009-concurrency
+-r--r----- 1 root root  307 Oct  3 22:54 empresa-ia-capa0
+## wsl.conf
+[boot]
+systemd=true
+
+[user]
+default=rodrigo_mella
+## interop
+WSLInterop
+python3.12
+register
+status
+enabled
+interpreter /init
+flags: P
+## netfilter
+iptables v1.8.10 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+ip6tables v1.8.10 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+## hashes vs HEAD
+executor/cgl-exec-opencode repo=d59231702baf
+oracle-wrapper/cgl-oracle-prepare.py repo=8a304a4814b1
+oracle-wrapper/cgl-oracle-validate.py repo=df5ff3a403a0
+executor/cgl-exec-netfilter repo=f9329fe6c35c
+/usr/local/libexec/cgl-exec-opencode inst=d59231702baf
+/usr/local/libexec/cgl-oracle-prepare inst=sha256sum: /
+/usr/local/libexec/cgl-oracle-validate inst=175e2471105b
+/usr/local/sbin/cgl-exec-netfilter inst=f9329fe6c35c
+## opencode
+-rwxr-xr-x 1 rodrigo_mella rodrigo_mella 185632896 Sep 30 19:18 /home/rodrigo_mella/.opencode/bin/opencode
+bin
+models.json
+## procesos
+rodrigo+  107975 /home/rodrigo_mella/.opencode/bin/opencode serve --hostname 127.0.0.1 --port 4097
+rodrigo+  245093 /home/rodrigo_mella/.local/state/constructor-temporal-poc/bin/temporal server start-dev --db-filename /
+rodrigo+  418846 opencode serve --hostname 127.0.0.1 --port 4096
+rodrigo+ 1147090 /home/rodrigo_mella/opencode-constructor-e2e/venv/bin/python manage.py runserver 0.0.0.0:8001
+rodrigo+ 2316326 node /home/rodrigo_mella/constructor-general-linux-m01-lab/experimental/temporal-poc/node_modules/tsx/d
+rodrigo+ 2316340 /usr/bin/node --require /home/rodrigo_mella/constructor-general-linux-m01-lab/experimental/temporal-poc
+rodrigo+ 2316348 /home/rodrigo_mella/constructor-general-linux-m01-lab/experimental/temporal-poc/node_modules/@esbuild/l
+rodrigo+ 2319155 /home/rodrigo_mella/.local/bin/tunnel-client run --profile cgl-temporal-publicacion --control-plane.pol
+rodrigo+ 2319171 node /home/rodrigo_mella/constructor-general-linux-m01-lab/mcp-opencode-adapter/node_modules/.bin/tsx /
+rodrigo+ 2319186 /usr/bin/node --require /home/rodrigo_mella/constructor-general-linux-m01-lab/mcp-opencode-adapter/node
+rodrigo+ 2319261 /home/rodrigo_mella/constructor-general-linux-m01-lab/mcp-opencode-adapter/node_modules/@esbuild/linux-
+rodrigo+ 2380634 bash ./t3-opencode.sh start /home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces/cgl-mv
+rodrigo+ 2380637 /home/rodrigo_mella/.opencode/bin/opencode serve --hostname 127.0.0.1 --port 4098
+cgl-exec-netfilter
+cgl-exec-opencode
+cgl-exec.sudoers
+g01-bwrap-lab
+e44a64337df99492d8c1ac5bcda9859d1c242dad
