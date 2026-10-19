@@ -65,3 +65,4 @@ Este checkpoint complementa el PASS supervisado de arriba y prevalece para la op
 - **Nota de operación:** la terminal de Rodrigo puede cortar pegados largos de varias líneas. Para cambios grandes, el Director publica en GitHub y Rodrigo sincroniza con `git pull --ff-only`.
 
 **Próximo chat:** usar la sección post-MVP del INICIA vigente. No repetir las misiones 003/004 ni el preflight ya demostrado; continuar solo con los pendientes anteriores, sin tocar servicios de otros proyectos.
+18-10: f456926 + scripts G01 publicados en rama g01-lista-blanca-inactiva (inactiva, no ejecutar); PC alineado con main e44a643.
