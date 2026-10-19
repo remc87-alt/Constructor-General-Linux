@@ -66,3 +66,9 @@ Este checkpoint complementa el PASS supervisado de arriba y prevalece para la op
 
 **Próximo chat:** usar la sección post-MVP del INICIA vigente. No repetir las misiones 003/004 ni el preflight ya demostrado; continuar solo con los pendientes anteriores, sin tocar servicios de otros proyectos.
 18-10: f456926 + scripts G01 publicados en rama g01-lista-blanca-inactiva (inactiva, no ejecutar); PC alineado con main e44a643.
+
+## Regla operativa: arranque tras reinicio
+
+Temporal, Worker y OpenCode 4098 no son servicios automáticos y quedan apagados al reiniciar el PC o WSL. El adaptador del túnel exige OpenCode 4098 arriba al iniciar; si no, el servicio cgl-temporal-publicacion entra en bucle "activating (auto-restart)" con ECONNREFUSED 127.0.0.1:4098 (observado 18-10). Regla para todo Director o IA: antes de cualquier misión o diagnóstico tras un reinicio, Rodrigo ejecuta ~/constructor-general-linux-m01-lab/experimental/temporal-poc/cgl-arranque.sh y se confirma "0 failing gate(s)".
+
+18-10: f456926 + scripts G01 publicados en la rama g01-lista-blanca-inactiva (f1a89ea; inactiva, no ejecutar); PC alineado con main.

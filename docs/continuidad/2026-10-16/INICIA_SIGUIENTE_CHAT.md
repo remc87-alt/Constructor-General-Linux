@@ -1,5 +1,9 @@
 # INICIA — CGL — cierre maestro 16/10/2026
 
+## Paso operativo previo obligatorio
+
+Si el PC o WSL se reinició: ejecutar cgl-arranque.sh antes de cualquier otra cosa.
+
 Proyecto exclusivo Constructor General Linux, https://github.com/remc87-alt/Constructor-General-Linux.
 Checkout `/home/rodrigo_mella/constructor-general-linux-m01-lab`; rama `m03-g5-consolidation-20261008`.
 Base previa `c1d625b18dd72c450767314695b0c786de486158`; código preparado `ff833399c9d4a80ac9f74cf9336515bfa7b4dcda`. Resolver commit documental contenedor con `git log -1 --format=%H -- docs/continuidad/2026-10-16/INICIA_SIGUIENTE_CHAT.md`; comparar SHA local/remoto antes de otro guardado. Publicación de código no es despliegue.
