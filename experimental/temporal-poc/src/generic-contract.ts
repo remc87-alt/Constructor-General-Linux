@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { ApplicationFailure } from "@temporalio/activity";
 import { authorizedOracleSuite } from "./oracle-registry.ts";
@@ -14,6 +15,15 @@ export type GenericValidationPolicy = {
   requiredArtifacts: string[];
 };
 
+// Optional delivery of validated artifacts to a GitHub repository. Only
+// repositories listed in CGL_DELIVERY_REPOS are accepted, and the branch is
+// always derived (cgl/<missionId>): a contract can never target main.
+export type GenericDeliveryPolicy = {
+  repo: string;
+  baseBranch: string;
+  targetDir: string;
+};
+
 export type GenericMissionContract = {
   missionId: string;
   workspace: string;
@@ -21,9 +31,23 @@ export type GenericMissionContract = {
   validation: GenericValidationPolicy;
   budget: { maxRepairAttempts: number; maxDurationMs: number; maxTokens: number | null };
   artifactPaths: string[];
+  delivery?: GenericDeliveryPolicy;
 };
 
-type ContractOptions = { workspaceRoot?: string };
+type ContractOptions = { workspaceRoot?: string; deliveryAllowlist?: string[] };
+
+const REPO = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
+const BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/;
+export function deliveryBranch(missionId: string): string { return `cgl/${missionId}`; }
+// CGL_DELIVERY_REPOS (comma separated) or, when unset, one owner/name per line
+// in ~/.config/cgl/delivery-repos. The worker inherits no shell exports, so the
+// file is the durable setting; an absent file means no delivery is allowed.
+export const DELIVERY_REPOS_FILE = path.join(os.homedir(), ".config/cgl/delivery-repos");
+export function deliveryAllowlistFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
+  let raw = env.CGL_DELIVERY_REPOS;
+  if (raw === undefined) { try { raw = fs.readFileSync(DELIVERY_REPOS_FILE, "utf8"); } catch { raw = ""; } }
+  return raw.split(/[,\n]/).map((r) => r.trim().toLowerCase()).filter((r) => r && !r.startsWith("#"));
+}
 const fail = (message: string): never => { throw ApplicationFailure.nonRetryable(`generic contract: ${message}`); };
 const record = (value: unknown, field: string): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${field} must be an object`);
@@ -78,7 +102,22 @@ export function validateGenericMissionContract(input: unknown, options: Contract
   const artifactPaths = raw.artifactPaths.map((item, i) => safeRelative(item, `artifactPaths[${i}]`));
   if (new Set(artifactPaths).size !== artifactPaths.length) fail("artifactPaths must be unique");
   for (const artifact of requiredArtifacts) if (!artifactPaths.includes(artifact)) fail("requiredArtifacts must be listed in artifactPaths");
-  return { missionId, workspace, instructions: text(raw.instructions, "instructions"), validation: { kind: "external-oracle", oracleId, requiredArtifacts }, budget: { maxRepairAttempts: maxRepairAttempts as number, maxDurationMs: maxDurationMs as number, maxTokens: maxTokens as number | null }, artifactPaths };
+  const delivery = raw.delivery === undefined || raw.delivery === null ? undefined : parseDelivery(raw.delivery, options.deliveryAllowlist ?? deliveryAllowlistFromEnv());
+  return { missionId, workspace, instructions: text(raw.instructions, "instructions"), validation: { kind: "external-oracle", oracleId, requiredArtifacts }, budget: { maxRepairAttempts: maxRepairAttempts as number, maxDurationMs: maxDurationMs as number, maxTokens: maxTokens as number | null }, artifactPaths, ...(delivery ? { delivery } : {}) };
+}
+
+// Fail closed before any model work: an unlisted repository or a malformed
+// branch is rejected at preparation, not after the mission spent its budget.
+function parseDelivery(value: unknown, allowlist: string[]): GenericDeliveryPolicy {
+  const raw = record(value, "delivery");
+  const repo = text(raw.repo, "delivery.repo", 201);
+  if (!REPO.test(repo) || repo.split("/").some((part) => part === "." || part === ".." || part.endsWith(".git"))) fail("delivery.repo must be owner/name");
+  if (!allowlist.includes(repo.toLowerCase())) fail("delivery.repo is not listed in CGL_DELIVERY_REPOS");
+  const baseBranch = raw.baseBranch === undefined ? "main" : text(raw.baseBranch, "delivery.baseBranch", 100);
+  if (!BRANCH.test(baseBranch) || baseBranch.includes("..") || baseBranch.endsWith("/") || baseBranch.endsWith(".lock")) fail("delivery.baseBranch is not a valid branch name");
+  const targetDir = raw.targetDir === undefined || raw.targetDir === "" ? "" : safeRelative(raw.targetDir, "delivery.targetDir");
+  if (targetDir.split(/[\\/]+/).includes(".git")) fail("delivery.targetDir must not point into .git");
+  return { repo, baseBranch, targetDir };
 }
 
 export function workspaceArtifactsAreFresh(contract: GenericMissionContract): string[] {

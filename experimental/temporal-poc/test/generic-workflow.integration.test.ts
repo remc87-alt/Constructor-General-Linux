@@ -19,7 +19,7 @@ function contract(missionId: string, maxDurationMs = 120_000, maxRepairAttempts 
 }
 
 // Fake activities record every call; behaviour is scripted per scenario.
-function fakeActivities(script: { wait?: any[]; validate?: any[]; continueFailsOnce?: boolean; waitGate?: Promise<void>; startFails?: boolean; abortFails?: boolean }, calls: Calls) {
+function fakeActivities(script: { wait?: any[]; validate?: any[]; continueFailsOnce?: boolean; waitGate?: Promise<void>; startFails?: boolean; abortFails?: boolean; deliveryFails?: boolean }, calls: Calls) {
   const rec = (name: string, input: any) => { (calls[name] ??= []).push(input); };
   const sent = new Set<string>();
   let continueFailed = false;
@@ -52,6 +52,11 @@ function fakeActivities(script: { wait?: any[]; validate?: any[]; continueFailsO
       if (!duplicate) rec("prompt_sent", input.continuationId);
       if (script.continueFailsOnce && !continueFailed) { continueFailed = true; throw new Error("socket hang up"); }
       return { continued: true, alreadySent: duplicate };
+    },
+    async deliverMissionArtifacts(input: any) {
+      rec("deliver", input);
+      if (script.deliveryFails) throw ApplicationFailure.nonRetryable("delivery: push failed", "DeliveryFailed");
+      return { status: "pushed", repo: input.contract.delivery.repo, branch: `cgl/${input.contract.missionId}`, base_branch: "main", commit: "abc123", files: ["a.py"], compare_url: "https://example.invalid/compare" };
     },
     async abortMission(input: any) {
       rec("abort", input);
@@ -260,5 +265,49 @@ test("cancelling the workflow still aborts the session and stays cancelled", { s
     assert.equal(d.status.name, "CANCELLED");
   });
   assert.equal(calls.abort.length, 1);
+  await h.connection.close();
+});
+
+test("a validated mission with delivery pushes once and stays validated", { skip: SKIP }, async () => {
+  const calls: Calls = {};
+  const h = await harness({}, calls);
+  const id = `it-deliver-${Date.now()}`;
+  const s: any = await run(h, id, { ...contract(id), delivery: { repo: "remc87-alt/cgl-sandbox", baseBranch: "main", targetDir: "" } });
+  assert.equal(s.phase, "validated");
+  assert.equal(s.functional_status, "passed");
+  assert.equal(s.next_action, "none");
+  assert.equal(calls.deliver.length, 1);
+  assert.equal(calls.deliver[0].deadlineAt, calls.validate[0].deadlineAt, "delivery shares the mission deadline");
+  assert.deepEqual({ status: s.delivery.status, branch: s.delivery.branch, commit: s.delivery.commit }, { status: "pushed", branch: `cgl/${id}`, commit: "abc123" });
+  const phases = s.transitions.map((t: any) => t.phase);
+  assert.ok(phases.indexOf("delivery_started") < phases.indexOf("delivered") && phases.indexOf("delivered") < phases.indexOf("validated"));
+  assert.equal(calls.abort, undefined);
+  await h.connection.close();
+});
+
+test("a failed delivery keeps the passed verdict and asks for review", { skip: SKIP }, async () => {
+  const calls: Calls = {};
+  const h = await harness({ deliveryFails: true }, calls);
+  const id = `it-deliver-fail-${Date.now()}`;
+  const s: any = await run(h, id, { ...contract(id), delivery: { repo: "remc87-alt/cgl-sandbox", baseBranch: "main", targetDir: "" } });
+  assert.equal(s.phase, "validated");
+  assert.equal(s.functional_status, "passed");
+  assert.equal(s.next_action, "review_evidence");
+  assert.equal(s.delivery.status, "failed");
+  assert.match(s.delivery.error, /push failed/);
+  assert.equal(s.last_error, "DeliveryFailed");
+  assert.equal(calls.deliver.length, 1, "a DeliveryFailed is not retried");
+  assert.equal(calls.abort, undefined);
+  await h.connection.close();
+});
+
+test("without delivery in the contract nothing is pushed", { skip: SKIP }, async () => {
+  const calls: Calls = {};
+  const h = await harness({}, calls);
+  const id = `it-nodeliver-${Date.now()}`;
+  const s: any = await run(h, id, contract(id));
+  assert.equal(s.phase, "validated");
+  assert.equal(s.delivery, undefined);
+  assert.equal(calls.deliver, undefined);
   await h.connection.close();
 });

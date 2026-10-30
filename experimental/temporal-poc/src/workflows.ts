@@ -80,6 +80,7 @@ export async function constructorPocWorkflow(input: PocInput): Promise<PocState>
 // ---------------- T3: real Constructor mission orchestrated by Temporal ----------------
 import type * as missionActivities from "./mission-activities";
 import type * as bridgeActivities from "./bridge-activities";
+import type * as deliveryActivities from "./delivery-activities";
 import type { GenericMissionContract } from "./generic-contract";
 import { acceptCheckpoint, type MissionCheckpoint } from "./mission-checkpoint";
 import { MISSION_PROMPT } from "./t3-fixture";
@@ -98,6 +99,12 @@ const { prepareGenericMission, verifyOpenCodeWorkspace } = proxyActivities<typeo
 const { validateGenericMission } = proxyActivities<typeof missionActivities>({
   startToCloseTimeout: "5 minutes",
   retry: { maximumAttempts: 1 }
+});
+// Delivery runs only after a passed oracle verdict. Its retry is safe: the
+// activity accepts an existing branch only when it is this mission's commit.
+const { deliverMissionArtifacts } = proxyActivities<typeof deliveryActivities>({
+  startToCloseTimeout: "4 minutes",
+  retry: { maximumAttempts: 2, initialInterval: "5 seconds", nonRetryableErrorTypes: ["DeliveryFailed", "BudgetExhausted"] }
 });
 // Containment is idempotent and intentionally outlives the mission budget.
 const { abortMission } = proxyActivities<typeof missionActivities>({
@@ -232,6 +239,8 @@ export type GenericMissionState = {
   permissions_handled: string[];
   artifact_paths: string[];
   oracle_execution_ids: string[];
+  // Present only when the contract asked for delivery (generic-delivery-v1).
+  delivery?: { status: "pending" | "pushed" | "already_delivered" | "failed"; repo: string; branch: string; commit: string | null; files: string[]; compare_url: string | null; error: string | null };
   checkpoint: MissionCheckpoint | null;
   budget_exhausted: boolean;
   deadline_at: string | null;
@@ -347,6 +356,25 @@ export async function genericConstructorMissionWorkflow(input: { contract: Gener
     return s;
   };
   const expired = () => budgetExpired(Date.now(), deadline);
+  // A delivery failure never turns a validated mission into a failed one: the
+  // functional verdict stays "passed" and the error is reported separately.
+  const deliver = async () => {
+    const target = contract.delivery!;
+    s.delivery = { status: "pending", repo: target.repo, branch: `cgl/${contract.missionId}`, commit: null, files: [], compare_url: null, error: null };
+    mark("delivery_started");
+    try {
+      const pushed = await deliverMissionArtifacts({ contract, deadlineAt: deadline });
+      s.delivery = { ...s.delivery, status: pushed.status, commit: pushed.commit, files: pushed.files, compare_url: pushed.compare_url };
+      mark("delivered");
+    } catch (error) {
+      if (isCancellation(error)) throw error;
+      const cause = error instanceof ActivityFailure ? error.cause : error;
+      const message = cause instanceof ApplicationFailure ? cause.message : "delivery activity failed";
+      s.delivery = { ...s.delivery, status: "failed", error: String(message).slice(0, 200) };
+      s.last_error = failurePhase(error).type;
+      mark("delivery_failed");
+    }
+  };
   mark("contract_validated");
   // One identity: Temporal workflow id, mission id and workspace basename.
   if (workflowInfo().workflowId !== contract.missionId) return await finish("identity_mismatch", "blocked");
@@ -389,7 +417,11 @@ export async function genericConstructorMissionWorkflow(input: { contract: Gener
       s.oracle_execution_ids.push(oracleExecutionId);
       const evidence = await validateGenericMission({ contract, sessionId: s.session_id, oracleExecutionId, deadlineAt: deadline });
       s.validation_evidence = evidence;
-      if (evidence.ok) return await finish("validated", "passed", "none");
+      if (evidence.ok) {
+        // Versioned: histories recorded before this patch replay unchanged.
+        if (contract.delivery && patched("generic-delivery-v1")) await deliver();
+        return await finish("validated", "passed", s.delivery?.status === "failed" ? "review_evidence" : "none");
+      }
       if (evidence.status === "failed" && canRepair(s.attempts.repairs, s.attempts.max_repairs)) {
         if (expired()) return await finish("budget_exhausted", "blocked");
         s.attempts.repairs++;

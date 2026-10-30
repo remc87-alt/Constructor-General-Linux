@@ -3,8 +3,9 @@ import { NativeConnection, Worker } from "@temporalio/worker";
 import * as baseActivities from "./activities.ts";
 import * as missionActivities from "./mission-activities.ts";
 import * as bridgeActivities from "./bridge-activities.ts";
+import * as deliveryActivities from "./delivery-activities.ts";
 
-const activities = { ...baseActivities, ...missionActivities, ...bridgeActivities };
+const activities = { ...baseActivities, ...missionActivities, ...bridgeActivities, ...deliveryActivities };
 
 const address = process.env.POC_TEMPORAL_ADDRESS;
 const taskQueue = process.env.POC_TASK_QUEUE;

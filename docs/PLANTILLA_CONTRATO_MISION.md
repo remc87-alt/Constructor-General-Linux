@@ -28,6 +28,9 @@ maxDurationMs 900000 (15 min, máximo); maxRepairAttempts 1; maxTokens null.
 ## 7. Parámetros para start_temporal_mission
 workflow_id: <mission_id> · title: <título corto> · contract: {"missionId": "<mission_id>", "workspace": "/home/rodrigo_mella/.local/state/constructor-temporal-poc/workspaces/<mission_id>", "instructions": "<Objetivo>. ESPECIFICACIÓN OBLIGATORIA: <sección 2 con ejemplos>. Crea <artifactPaths> y pruebas que cubran los ejemplos; córrelas y termina. <Restricciones>.", "validation": {"kind": "external-oracle", "oracleId": "<oráculo>", "requiredArtifacts": ["<artefacto>"]}, "budget": {"maxRepairAttempts": 1, "maxDurationMs": 900000, "maxTokens": null}, "artifactPaths": ["<artefacto>"]}
 
+## 7b. Entrega al repositorio (opcional)
+Agregar al contract: `"delivery": {"repo": "<owner>/<repo>", "baseBranch": "main", "targetDir": ""}`. Al quedar `validated`, el worker sube los artifactPaths como rama `cgl/<mission_id>` (nunca a main, nunca forzado). El repo debe estar en `~/.config/cgl/delivery-repos`; si no, la misión se rechaza al preparar. Resultado en `state.delivery` de get_temporal_mission (`status`, `commit`, `compare_url`). Una entrega fallida no cambia el veredicto: queda `validated` con `delivery.status = failed` y `next_action = review_evidence`. Detalle: `docs/ENTREGA_A_REPO.md`.
+
 ## 8. Oráculos autorizados
 - expense-oracle-001 (suite csv-expense-v1): expense_cli.py + test_expense_cli.py. Referencia validada: cgl-mvp-expense-20261017-003 y -004.
 - Un tipo de tarea nuevo requiere primero su propio oráculo (validador privado) registrado en oracle-registry.ts.
